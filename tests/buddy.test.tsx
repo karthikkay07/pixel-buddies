@@ -1,6 +1,9 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { ANIMS, ANIM_NAMES, poseAt } from '../hooks/animations'
+import { ANIMS, ANIM_NAMES, clipOf, poseAt } from '../hooks/animations'
+
+// 40x9 cells of 3 u32s = 4320 bytes = 5760 base64 characters.
+const RASTER_LENGTH = 5760
 import { CANVAS_H, CANVAS_W, KINDS, SPRITES, pixels, rasterCells, svgSource } from '../hooks/sprites'
 import { DEFAULT_STYLE } from '../hooks/style'
 
@@ -29,10 +32,9 @@ test('every sprite is 12x12 and uses only known letters', async () => {
 test('every animation draws for every type, in the terminal and as SVG', async () => {
   for (const { value: kind } of KINDS) {
     for (const anim of ANIM_NAMES) {
-      // 19x9 cells of 3 u32s = 2052 bytes = 2736 base64 characters.
-      expect(rasterCells({ kind, color: '#4FA3E0', style: DEFAULT_STYLE }, anim, 3).length).toBe(2736)
+      expect(rasterCells({ kind, color: '#4FA3E0', style: DEFAULT_STYLE }, clipOf(anim), 3).length).toBe(RASTER_LENGTH)
       // The busiest look there is, to stay well under the Svg element's limit.
-      const svg = svgSource({ kind, color: '#9B6BDB', style: { eyes: 'angry', pattern: 'spots', accessory: 'headphones' } }, anim)
+      const svg = svgSource({ kind, color: '#9B6BDB', style: { eyes: 'angry', pattern: 'spots', accessory: 'headphones' } }, clipOf(anim))
       expect(svg.startsWith('<svg')).toBe(true)
       expect(svg.length < 131072).toBe(true)
       expect(svg.includes('<animate')).toBe(true)

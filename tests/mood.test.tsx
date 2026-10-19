@@ -41,11 +41,12 @@ test('says hello, then settles down', { options: { chattiness: 'normal', sleepAf
   expect(now.texts).toContain('Captain Bolt')
   expect(now.texts).toContain('Pirate')
   expect(now.texts).toContain('“')
-  expect(now.alt).toContain('wave')
+  expect(now.alt).toContain('says hi')
   await clock.advance(8000)
   now = await band($)
   expect(now.texts).not.toContain('“')
-  expect(now.alt).toContain('idle')
+  // Done waving: resting, or off doing something of its own.
+  expect(now.alt).not.toContain('says hi')
 })
 
 test('a poke always gets a reaction', { options: { chattiness: 'normal', sleepAfterMinutes: 0 } }, async ($, on) => {
@@ -62,12 +63,12 @@ test('dozes off when idle and wakes up on activity', { options: { chattiness: 'n
   const clock = world(on)
   await $.session.start({ cwd: '/work', surface: 'desktop', isInteractive: true })
   await clock.advance(30_000)
-  expect((await band($)).alt).not.toContain('sleeping')
+  expect((await band($)).alt).not.toContain('asleep')
   await clock.advance(45_000)
-  expect((await band($)).alt).toContain('sleeping')
+  expect((await band($)).alt).toContain('asleep')
   await $.command.run({ command: 'buddy', args: 'poke', ...RUN })
   await clock.advance(10_000)
-  expect((await band($)).alt).not.toContain('sleeping')
+  expect((await band($)).alt).not.toContain('asleep')
 })
 
 test('silent buddies animate but never speak', { options: { chattiness: 'silent', sleepAfterMinutes: 0 } }, async ($, on) => {
@@ -81,4 +82,30 @@ test('silent buddies animate but never speak', { options: { chattiness: 'silent'
   // Ten idle minutes of a silent buddy: no thoughts either.
   await clock.advance(600_000)
   expect((await band($)).texts).not.toContain('💭')
+})
+
+test('between moments it gets up to things of its own', { options: { chattiness: 'silent', sleepAfterMinutes: 0 } }, async ($, on) => {
+  const clock = world(on)
+  await $.session.start({ cwd: '/work', surface: 'desktop', isInteractive: true })
+  await clock.advance(8000)
+  const seen = new Set<string>()
+  for (let s = 0; s < 120; s++) {
+    await clock.advance(1000)
+    seen.add((await band($)).alt.replace('Captain Bolt the crab, ', ''))
+  }
+  // More than resting: acts, walks, a pirate's own habits.
+  expect([...seen].filter(x => x !== 'hanging out').length >= 2).toBe(true)
+})
+
+test('while Claude works it holds its own prop', { options: { chattiness: 'silent', sleepAfterMinutes: 0 } }, async ($, on) => {
+  const clock = world(on)
+  await $.session.start({ cwd: '/work', surface: 'desktop', isInteractive: true })
+  // Past the hello: a reaction plays over everything else.
+  await clock.advance(5000)
+  const ui = await $.ui.mount({ plugin: 'pixel-buddies', surface: 'desktop', ...BAND, props: { ...BAND.props, isWorking: true } })
+  const svg = await ui.find({ type: 'Svg' })
+  await ui.unmount()
+  expect(String(svg?.props.alt)).toContain('watching Claude work')
+  // A pirate reads its treasure map: parchment in the picture.
+  expect(String(svg?.props.source)).toContain('#EBD9A8')
 })

@@ -1,8 +1,9 @@
 import type { Anim } from '../types'
+import type { PropKind } from './props'
 
 export type Eyes = 'open' | 'closed' | 'happy' | 'wide' | 'sad'
 export type Mouth = 'smile' | 'open' | 'flat' | 'none'
-export type EffectKind = 'bang' | 'dots' | 'heart' | 'sparkle' | 'sweat' | 'zzz' | 'note'
+export type EffectKind = 'bang' | 'dots' | 'heart' | 'sparkle' | 'sweat' | 'zzz' | 'note' | 'question'
 
 /** One frame of a buddy: where it stands, its face, and what floats beside it. */
 export type Pose = {
@@ -11,7 +12,21 @@ export type Pose = {
   eyes: Eyes
   mouth: Mouth
   effect: { kind: EffectKind; frame: number } | null
+  /** Facing the other way: the sprite, its accessory and its prop mirrored. */
+  flip?: boolean
+  /** Squashed by 1 (sitting) or 2 (lying down), or stretched by -1. */
+  squash?: number
+  /** Where the pupils look; absent looks ahead. */
+  look?: 'left' | 'right'
+  /** Something the buddy holds or plays with. */
+  prop?: { kind: PropKind; frame: number } | null
 }
+
+/**
+ * A playable stretch of poses: one of the animations, an act, or a walk.
+ * `key` names it for caching; the same key always draws the same frames.
+ */
+export type Clip = { key: string; label: string; length: number; pose: (t: number) => Pose }
 
 /** Every frame lasts one tick. */
 export const TICK_MS = 125
@@ -87,4 +102,16 @@ export function isAnim(value: unknown): value is Anim {
 export function poseAt(anim: Anim, tick: number): Pose {
   const def = ANIMS[anim]
   return def.pose(((tick % def.length) + def.length) % def.length)
+}
+
+/** An animation as a clip. */
+export function clipOf(anim: Anim): Clip {
+  return { key: anim, ...ANIMS[anim] }
+}
+
+export const BASE_POSE: Pose = base
+
+/** The pose of a clip at a tick, looping. */
+export function clipPose(clip: Clip, tick: number): Pose {
+  return clip.pose(((tick % clip.length) + clip.length) % clip.length)
 }

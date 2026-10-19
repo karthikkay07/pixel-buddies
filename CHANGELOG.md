@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.4.0 — 2026-10-19
+
+Buddies have a life of their own.
+
+- **Behaviour engine:** between moments, your buddy does things on its own. It rests, picks an act, plays it, and rests again: about every 10 s for an energetic buddy and every 40 s for a calm one. The choice depends on personality, time of day (morning stretches, late-night yawns) and recent errors (the grump sulks), and it never repeats the last few.
+- **Wandering:** buddies walk around a wider stage (40 columns in the terminal), facing the way they go, and stay where they stop.
+- **10 universal acts:** look around, turn around, stretch, yawn, shiver, sneeze, scratch, sit, lie down, chase a fly.
+- **24 personality acts with props:**
+  - pom-poms, jumping jacks and a flag
+  - coffee, foot tapping and a rain cloud
+  - meditating, a book and pondering
+  - juggling, spinning and a tiny fire
+  - cocoa, a pillow nap and nodding off
+  - a laptop, a cube and a light-bulb idea
+  - a telescope, a treasure map and a parrot
+  - a quill, a rose and the moon
+- **Working props:** while Claude works, your buddy works too, with its personality's prop.
+- **Richer poses:** facing direction, squash and stretch (sitting, lying), where the pupils look, held props, and a "?" effect.
+- The band says what your buddy is up to ("is reading a treasure map").
+- The studio preview can play any reaction, act, walking or working.
+- Smaller desktop SVGs: each distinct picture is drawn once and moved with `<use>`, so a walk is two pictures however far it goes.
+- 54 tests across 8 suites (up from 43).
+
 ## 0.3.0 — 2026-10-19
 
 Dress up your buddy, and earn it.

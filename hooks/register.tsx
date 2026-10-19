@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Anim, Buddy, Draft, Mood, Stats, Style } from '../types'
+import type { ActState, Anim, Archetype, Buddy, Draft, Mood, Stats, Style } from '../types'
 import {
   ACHIEVEMENTS,
   EMPTY_STATS,
@@ -15,7 +15,10 @@ import {
   unlockedItems,
 } from './achievements'
 import type { Achievement, Item } from './achievements'
-import { ANIMS, ANIM_NAMES, TICK_MS, isAnim } from './animations'
+import { ACTS, DOING, WORK_PROP, actById, pickNext, restMs, walkClip, walkTarget } from './acts'
+import { ANIMS, ANIM_NAMES, TICK_MS, clipOf, isAnim } from './animations'
+import type { Clip } from './animations'
+import { propFrames } from './props'
 import {
   MAX_BUDDIES,
   MAX_NAME,
@@ -69,6 +72,7 @@ const activeId = atom({ plugin: 'pixel-buddies', key: 'activeId' } as const, nul
 const isHidden = atom({ plugin: 'pixel-buddies', key: 'isHidden' } as const, false)
 const mood = atom({ plugin: 'pixel-buddies', key: 'mood' } as const, REST)
 const isAsleep = atom({ plugin: 'pixel-buddies', key: 'isAsleep' } as const, false)
+const act = atom({ plugin: 'pixel-buddies', key: 'act' } as const, null)
 const stats = atom({ plugin: 'pixel-buddies', key: 'stats' } as const, EMPTY_STATS)
 const earned = atom({ plugin: 'pixel-buddies', key: 'earned' } as const, [])
 
@@ -88,6 +92,10 @@ let turnStartedAt = 0
 let recentLines: string[] = []
 /** Stats changed since they were last written to the store. */
 let isStatsDirty = false
+/** Where the buddy stands on its stage, from the middle; it moves by walking. */
+let homeX = 0
+let recentActs: string[] = []
+let nextActTimer: { cancel: () => void } | null = null
 
 function pick<T>(list: readonly T[]): T {
   return list[Math.floor(Math.random() * list.length)] ?? (list[0] as T)
@@ -97,10 +105,56 @@ function dots(n: number): string {
   return '●'.repeat(n) + '○'.repeat(5 - n)
 }
 
-/** What the buddy is playing now: a reaction, else its resting state. */
-function currentAnim(m: Mood, asleep: boolean, now: number): Anim {
-  if (m.anim && now < m.until) return m.anim
-  return asleep ? 'sleeping' : isWorking ? 'typing' : 'idle'
+/** A clip moved to where the buddy stands. */
+function at(clip: Clip, x: number): Clip {
+  if (x === 0) return clip
+  return { ...clip, key: `${clip.key}@${x}`, pose: t => {
+    const p = clip.pose(t)
+    return { ...p, dx: p.dx + x }
+  } }
+}
+
+/** Typing along while Claude works, with this personality's own prop. */
+function workClip(archetype: Archetype): Clip {
+  const typing = clipOf('typing')
+  const kind = WORK_PROP[archetype]
+  const frames = propFrames(kind)
+  return {
+    key: `work:${archetype}`,
+    label: 'Working',
+    length: typing.length * frames,
+    pose: t => ({ ...typing.pose(t % typing.length), prop: { kind, frame: Math.floor(t / 2) % frames } }),
+  }
+}
+
+/** Walking from one side to the other and back, for the studio preview. */
+function patrolClip(): Clip {
+  const there = walkClip(-6, 6)
+  const back = walkClip(6, -6)
+  return { key: 'patrol', label: 'Walk', length: there.length + back.length, pose: t => (t < there.length ? there.pose(t) : back.pose(t - there.length)) }
+}
+
+/** A studio preview: an animation, an act, a walk, or working. */
+function previewClip(id: string, archetype: Archetype): Clip {
+  if (isAnim(id)) return clipOf(id)
+  if (id === 'walk') return patrolClip()
+  if (id === 'work') return workClip(archetype)
+  return actById(id) ?? clipOf('idle')
+}
+
+type Showing = { clip: Clip; since: number; status: string }
+
+/** What the buddy plays now: a reaction, then working, sleeping, an act, and resting last. */
+function showing(m: Mood, asleep: boolean, a: ActState | null, now: number, archetype: Archetype): Showing {
+  if (m.anim && now < m.until) return { clip: at(clipOf(m.anim), homeX), since: m.since, status: STATUS[m.anim] }
+  if (isWorking) return { clip: at(workClip(archetype), homeX), since: 0, status: STATUS.typing }
+  if (asleep) return { clip: at(clipOf('sleeping'), homeX), since: 0, status: STATUS.sleeping }
+  if (a && now < a.until) {
+    if (a.id === 'walk') return { clip: walkClip(a.from, a.to), since: a.since, status: DOING.walk ?? STATUS.idle }
+    const found = actById(a.id)
+    if (found) return { clip: at(found, homeX), since: a.since, status: DOING[found.id] ?? STATUS.idle }
+  }
+  return { clip: at(clipOf('idle'), homeX), since: 0, status: STATUS.idle }
 }
 
 function clockTime(now: number): string {
@@ -197,6 +251,48 @@ async function award($: EngineInterface, list: readonly Achievement[]) {
   }
 }
 
+/** Waits a while (longer for a calm buddy), then does something. */
+async function scheduleAct($: EngineInterface, ms?: number) {
+  nextActTimer?.cancel()
+  const buddy = await activeBuddy($)
+  const wait = ms ?? restMs(buddy ? personalityOf(buddy).energy : 3)
+  nextActTimer = $.clock.after(wait, () => void startAct($))
+}
+
+/** Starts the next act or walk, if the buddy is free to; otherwise tries again soon. */
+async function startAct($: EngineInterface) {
+  const buddy = await activeBuddy($)
+  const now = await $.clock.now()
+  const m = await read($, mood)
+  const isBusy = !buddy || isWorking || (m.anim !== null && now < m.until) || (await read($, isHidden)) || (await read($, isAsleep))
+  if (!buddy || isBusy) {
+    await scheduleAct($, 5000)
+    return
+  }
+  const p = personalityOf(buddy)
+  const next = pickNext(p.archetype, p.energy, { hour: new Date(now).getHours(), sinceErrorMs: now - lastErrorAt }, recentActs)
+  let state: ActState
+  if (next.kind === 'walk') {
+    const to = walkTarget(homeX)
+    const clip = walkClip(homeX, to)
+    state = { id: 'walk', since: tick, until: now + clip.length * TICK_MS, from: homeX, to }
+  } else {
+    state = { id: next.act.id, since: tick, until: now + next.act.length * TICK_MS, from: homeX, to: homeX }
+  }
+  recentActs = [...recentActs, state.id].slice(-4)
+  await update($, act, () => state)
+  $.clock.after(state.until - now + 20, () => void endAct($, state))
+}
+
+async function endAct($: EngineInterface, done: ActState) {
+  const current = await read($, act)
+  if (current !== null && current.since === done.since && current.id === done.id) {
+    homeX = done.to
+    await update($, act, () => null)
+  }
+  await scheduleAct($)
+}
+
 /** Anything the person or Claude does: it keeps the buddy awake, or wakes it. */
 async function activity($: EngineInterface) {
   lastActivity = await $.clock.now()
@@ -231,16 +327,16 @@ async function paint($: EngineInterface) {
     if (buddy) {
       const m = await read($, mood)
       const now = await $.clock.now()
-      const anim = currentAnim(m, await read($, isAsleep), now)
-      const frame = anim === m.anim ? tick - m.since : tick
-      const shown = await $.ui.blit({ requestId: bandSite, key: 'band-sprite', cells: rasterCells(buddy, anim, frame) })
+      const now2 = showing(m, await read($, isAsleep), await read($, act), now, personalityOf(buddy).archetype)
+      const shown = await $.ui.blit({ requestId: bandSite, key: 'band-sprite', cells: rasterCells(buddy, now2.clip, tick - now2.since) })
       // Not mounted any more: stop painting until the band draws it again.
       if (shown.deny) bandSite = null
     }
   }
   if (isStudioOnTerminal) {
     const d = await read($, draft)
-    const shown = await $.ui.blit({ requestId: STUDIO, key: 'preview', cells: rasterCells(d, d.preview, tick) })
+    const archetype = personalityOf({ name: cleanName(d.name) || 'Buddy', archetype: d.archetype, seed: d.seed }).archetype
+    const shown = await $.ui.blit({ requestId: STUDIO, key: 'preview', cells: rasterCells(d, previewClip(d.preview, archetype), tick) })
     if (shown.deny) isStudioOnTerminal = false
   }
 }
@@ -271,6 +367,7 @@ async function start($: EngineInterface) {
 
   $.clock.every(TICK_MS, () => void paint($))
   $.clock.every(BRAIN_EVERY_MS, () => void brain($))
+  await scheduleAct($, 4000)
 }
 
 async function openStudio($: EngineInterface) {
@@ -504,9 +601,9 @@ export const register: Register = (on, options) => {
     isWorking = e.props.isWorking
     const m = await read($, mood)
     const now = await $.clock.now()
-    const anim = currentAnim(m, await read($, isAsleep), now)
-    const line = m.line !== null && now < m.lineUntil ? m.line : null
     const personality = personalityOf(buddy)
+    const show = showing(m, await read($, isAsleep), await read($, act), now, personality.archetype)
+    const line = m.line !== null && now < m.lineUntil ? m.line : null
 
     let sprite
     if (e.surface === 'terminal') {
@@ -517,7 +614,7 @@ export const register: Register = (on, options) => {
           key="band-sprite"
           columns={CANVAS_W}
           rows={CANVAS_H / 2}
-          cells={rasterCells(buddy, anim, anim === m.anim ? tick - m.since : tick)}
+          cells={rasterCells(buddy, show.clip, tick - show.since)}
         />
       )
     } else {
@@ -525,9 +622,9 @@ export const register: Register = (on, options) => {
       const { Svg } = $.ui.resolve(e)
       sprite = (
         <Svg
-          source={svgSource(buddy, anim)}
-          alt={`${buddy.name} the ${buddy.kind}, ${ANIMS[anim].label.toLowerCase()}`}
-          width={76}
+          source={svgSource(buddy, show.clip)}
+          alt={`${buddy.name} the ${buddy.kind}, ${show.status.replace(/^is /, '')}`}
+          width={160}
           height={72}
           isInteractive
         />
@@ -549,7 +646,7 @@ export const register: Register = (on, options) => {
               {m.isThought ? `💭 ${line}` : `“${line}”`}
             </Text>
           ) : (
-            <Text dimColor>{STATUS[anim]}</Text>
+            <Text dimColor>{show.status}</Text>
           )}
         </Box>
       </Box>
@@ -581,15 +678,17 @@ export const register: Register = (on, options) => {
     if (e.surface === 'terminal') {
       const { Raster } = $.ui.resolve(e)
       isStudioOnTerminal = true
-      preview = <Raster key="preview" columns={CANVAS_W} rows={CANVAS_H / 2} cells={rasterCells(d, d.preview, tick)} />
+      preview = (
+        <Raster key="preview" columns={CANVAS_W} rows={CANVAS_H / 2} cells={rasterCells(d, previewClip(d.preview, personality.archetype), tick)} />
+      )
     } else {
       isStudioOnTerminal = false
       const { Svg } = $.ui.resolve(e)
       preview = (
         <Svg
-          source={svgSource(d, d.preview)}
-          alt={`Preview of ${d.name || 'your buddy'}, ${ANIMS[d.preview].label.toLowerCase()}`}
-          width={152}
+          source={svgSource(d, previewClip(d.preview, personality.archetype))}
+          alt={`Preview of ${d.name || 'your buddy'}, ${previewClip(d.preview, personality.archetype).label.toLowerCase()}`}
+          width={320}
           height={144}
           isInteractive
         />
@@ -696,9 +795,14 @@ export const register: Register = (on, options) => {
         <Select
           key="preview"
           label="Preview"
-          options={ANIM_NAMES.map(a => ({ value: a, label: ANIMS[a].label }))}
+          options={[
+            ...ANIM_NAMES.map(a => ({ value: a, label: ANIMS[a].label })),
+            { value: 'work', label: 'Working' },
+            { value: 'walk', label: 'Walk' },
+            ...ACTS.filter(a => !a.who || a.who.includes(personality.archetype)).map(a => ({ value: a.id, label: a.label })),
+          ]}
           value={d.preview}
-          onSelect={(v: string) => isAnim(v) && update($, draft, x => ({ ...x, preview: v }))}
+          onSelect={(v: string) => update($, draft, x => ({ ...x, preview: v }))}
         />
 
         <Box flexDirection="row" gap={2}>

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/hero.svg" alt="Four pixel buddies: Captain Bolt the pirate crab in shades waving, Sunny the spotted cheerleader cat in a party hat celebrating, Sprocket the nerd robot in headphones thinking, and Sleepy Mochi the crowned dragon asleep" width="708">
+  <img src="assets/hero.svg" alt="Four pixel buddies living their lives: Captain Bolt the pirate crab looking through a telescope, Sunny the cheerleader cat shaking pom-poms, Sprocket the nerd robot typing on a laptop, and Sleepy Mochi the dragon sipping cocoa" width="710">
 </p>
 
 <h1 align="center">Pixel Buddies</h1>
@@ -7,6 +7,7 @@
 <p align="center">
   A tiny animated pixel-art companion with its own personality, living above your prompt in Claude Code.<br>
   Pick a type, a colour and a name. It reacts to your work, cheers your wins, sulks at errors, and thinks out loud.<br>
+  It has a life of its own: it wanders, stretches, chases flies and does whatever its personality loves to do.<br>
   Use it, earn achievements, and unlock new types, eyes, patterns and accessories.
 </p>
 
@@ -41,8 +42,9 @@
   - stretches after a long job
 - **A wardrobe to earn:** 7 types, 6 eye styles, 5 patterns, 8 accessories and any colour you like. **17 achievements** from real use unlock them, and you can try on anything locked to see what you're working toward.
 - **Random thoughts:** between tasks it thinks out loud ("💭 If a function is never called, does it truly exist?"), paced by its personality and your chattiness setting.
+- **A life of its own:** between moments your buddy wanders around, looks about, stretches, yawns, sits, lies down and chases flies. It also has habits of its own: the pirate looks through a telescope, the grump sips coffee, the nerd types on a tiny laptop, the poet writes poems. That's **34 acts** and walking, picked by personality, energy and time of day.
 - **Falls asleep when you're away** (Zzz…) and wakes up when you're back.
-- **9 animations:** idle, typing, thinking, happy, celebrate, sad, surprised, sleeping and wave, with floating effects (hearts, sparkles, sweat drops, Zzz, !).
+- **9 reaction animations:** idle, typing, thinking, happy, celebrate, sad, surprised, sleeping and wave, with floating effects (hearts, sparkles, sweat drops, Zzz, !, ?).
 - **Real pixel art everywhere:** half-block cells repainted 8 times a second in the terminal, and a self-animating SVG in the Claude desktop app.
 - **Private and offline:** no network calls and no model calls. Every line your buddy says is written into the mod, and nothing about your code leaves your machine.
 - **Robust:** saved data is checked when it loads, and the buddy can never block a prompt or a tool call.
@@ -56,7 +58,7 @@
 | <img src="assets/wardrobe.png" alt="Seven types (crab, blob, robot, ghost, cat, dragon, cactus) each shown with no accessory, crown, party hat, beanie, bow, flower, headphones, shades and scarf" width="420"> | <img src="assets/eyes-patterns.png" alt="Seven types with classic, dots, big, sleepy, angry and love eyes, then plain, spots, stripes, belly and gradient patterns" width="420"> |
 
 <details>
-<summary>All 9 animations</summary>
+<summary>All 9 reaction animations</summary>
 
 <img src="assets/animations.png" alt="Animation sheet: idle, typing, thinking, happy, celebrate, sad, surprised, sleeping and wave, five frames each" width="560">
 
@@ -114,7 +116,7 @@ claude plugin uninstall pixel-buddies
 | **Personality** picker | arrows + Enter | *Auto (from the name)*, or one of the 8 archetypes |
 | **Reroll** | `p` | Rolls a different personality for an *Auto* buddy |
 | **Eyes** · **Pattern** · **Accessory** pickers | arrows + Enter | Dress your buddy up (🔒 marks what's still locked) |
-| **Preview** picker | arrows + Enter | Plays any of the 9 animations in the preview |
+| **Preview** picker | arrows + Enter | Plays any reaction, act, walking or working in the preview |
 | **Save buddy / Save changes** | `s` | Saves and makes it your active buddy (it says hello) |
 | **Save as new** | `n` | Keeps the current buddy and adds this design as a new one |
 | **Surprise me** | `r` | Random type, colour, name, personality and style, from what you've unlocked |
@@ -149,6 +151,27 @@ With *Auto*, the first word of the name that matches a keyword decides ("Captain
 | a turn that took 45 s or more finishes | hops happily (♥) |
 | nothing happens for a while | thinks out loud (💭) |
 | you're away past the sleep timer | falls asleep (Zzz) and wakes up when you're back |
+
+## A life of its own
+
+Your buddy doesn't just bob in place. Every so often it does something of its own: a few seconds of a habit, then a rest, then something else. An energetic buddy is up to something every ~10 s, a calm one every ~40 s, and it never repeats its last few acts.
+
+<p align="center"><img src="assets/acts.png" alt="Each personality's three signature acts: cheerleader pom-poms, jumping jacks and flag; grump coffee, foot tap and rain cloud; philosopher meditating, reading and pondering; gremlin juggling, spinning and a tiny fire; sleepy cocoa, pillow nap and nodding off; nerd laptop, cube and light-bulb idea; pirate telescope, treasure map and parrot; poet quill, rose and moon" width="300"></p>
+
+| Personality | Its habits | While Claude works |
+|---|---|---|
+| **Cheerleader** | shakes pom-poms · jumping jacks · waves a flag | pom-poms |
+| **Grump** | sips coffee · taps a foot · sulks under a rain cloud | coffee |
+| **Philosopher** | meditates, floating · reads a book · ponders (?) | book |
+| **Chaos gremlin** | juggles · spins · starts a tiny fire, then stomps it out | juggling |
+| **Sleepy** | sips cocoa · naps on a pillow · nods off | cocoa |
+| **Nerd** | types on a laptop · solves a cube · has an idea (💡) | laptop |
+| **Pirate** | looks through a telescope · reads a treasure map · a parrot drops by | treasure map |
+| **Poet** | writes a poem · smells a rose · gazes at the moon | quill |
+
+**Every buddy** also looks around, turns around, stretches, yawns, shivers, sneezes, scratches an itch, sits down, lies down, chases a fly and **wanders** across its stage, facing the way it walks.
+
+**The moment matters:** mornings bring stretches and coffee, late nights bring yawns, naps and moon-gazing, and a grump that just saw an error is much likelier to sulk under its cloud. Reactions (wins, errors, prompts) always cut in, and while Claude works your buddy works too, holding its personality's prop.
 
 ## Achievements
 
@@ -200,8 +223,9 @@ Pixel Buddies is a **mod**: a TypeScript hooks module that Claude Code loads in 
 | Buddy above the prompt | a `ui.render` hook for `AbovePrompt` |
 | Reactions | `prompt.submit`, `tool.call` (the result after `next`) and `turn.complete` hooks. Each has a pass-through `.catch`, so a buddy can never block your work. |
 | Thoughts and sleep | a `$.clock.every` "brain" tick every 10 s |
-| Terminal animation | a `Raster` element repainted in place by `$.ui.blit` every 125 ms |
-| Desktop animation | an `Svg` element where each distinct frame is a group toggled by SMIL `<animate>`, so it needs no timers |
+| Acts and wandering | a `$.clock.after` loop: rest, pick an act from [`hooks/acts.ts`](hooks/acts.ts) (by personality, energy, hour and recent errors), play it, rest again |
+| Terminal animation | a 40 × 9 `Raster` stage repainted in place by `$.ui.blit` every 125 ms |
+| Desktop animation | an `Svg` element: each distinct picture of the buddy is drawn once in `<defs>` and shown in turn by `<use x=…>` with SMIL `<animate>`, so a walk across the stage is two pictures and no timers |
 | Saved buddies | `$.store`, checked on load by [`hooks/data.ts`](hooks/data.ts) |
 | Live state | `atom` / `read` / `update` over `$.state` (`mood`, `isAsleep`, `stats`, `earned`, …), so a change redraws whatever reads it |
 | Achievements | counts bumped from the same hooks, checked against [`hooks/achievements.ts`](hooks/achievements.ts), saved to `$.store` on the brain tick and at `session.end` |
@@ -227,13 +251,14 @@ claude plugin validate .
 claude plugin test .
 ```
 
-`validate` checks the manifest, the marketplace file and the hooks module the way the engine will load them. `test` runs 43 tests in seven suites:
+`validate` checks the manifest, the marketplace file and the hooks module the way the engine will load them. `test` runs 54 tests in eight suites:
 
 | Suite | Covers |
 |---|---|
 | [`tests/buddy.test.tsx`](tests/buddy.test.tsx) | Sprite data, every animation × type in the terminal and as SVG, poses, and the studio → save → band flow on `terminal` and `desktop` |
 | [`tests/personality.test.ts`](tests/personality.test.ts) | Lines for every archetype and event, name → personality, rerolls, chattiness levels, no-repeat lines, thought pacing, reading tool results |
-| [`tests/mood.test.tsx`](tests/mood.test.tsx) | Hello on session start, poke, falling asleep and waking on the mock clock, silent mode |
+| [`tests/acts.test.ts`](tests/acts.test.ts) | Every act on every type (terminal and SVG size), every prop on the stage, walks, picking by personality, energy, night and errors, rest times |
+| [`tests/mood.test.tsx`](tests/mood.test.tsx) | Hello on session start, poke, falling asleep and waking, silent mode, acts happening on their own, the working prop (on the mock clock) |
 | [`tests/lifecycle.test.tsx`](tests/lifecycle.test.tsx) | Restoring from a partly broken store, `/buddy hide` and `show`, switching, Save as new, Delete |
 | [`tests/achievements.test.ts`](tests/achievements.test.ts) | Every item free or earned by exactly one achievement, progress, unlocking, day counting, accessory anchors on every type |
 | [`tests/unlocks.test.tsx`](tests/unlocks.test.tsx) | Trying on locked items and being stopped at save, earning *Best friends* by poking and saving love eyes, custom colours after *Artist* |
@@ -250,11 +275,19 @@ For editor type-checking, load the mod once (Claude Code writes its typings to `
 3. Make it free (`FREE`) or a reward of an achievement in `hooks/achievements.ts`.
 4. Run `claude plugin test .`. The tests draw every animation and accessory for it, and check that it's unlockable.
 
+### Add an act
+
+1. Add it to `UNIVERSAL` or `SIGNATURE` in `hooks/acts.ts` with `act(id, label, weight, steps, { who, when })`. Each step holds a pose (eyes, mouth, look, squash, flip, offset, effect, prop) for some ticks of 125 ms.
+2. Give it a phrase in `DOING` ("is juggling") for the band.
+3. Need a new prop? Draw it in `PROPS` in `hooks/props.ts` with an anchor: `hand`, `front`, `above`, `perch`, `ground` or `free`.
+4. Run `claude plugin test .`. The tests draw it on every type and check it fits the stage.
+
 ### Add a personality
 
 1. Add an entry to `ARCHETYPES` in `hooks/personality.ts`: label, energy, chattiness, three traits, name keywords, and lines for each event (`{name}`, `{tool}` and `{time}` are filled in).
 2. Add it to `Archetype` in `types/index.d.ts`.
-3. Run `claude plugin test .`. The tests check every event has lines and that they're short enough.
+3. Give it three signature acts in `hooks/acts.ts` and a prop in `WORK_PROP`.
+4. Run `claude plugin test .`. The tests check every event has lines, that they're short enough, and that the personality has its three acts.
 
 ### Layout
 
@@ -270,6 +303,8 @@ hooks/
   sprites.ts         pixel data, effects, Raster and SVG encoders
   style.ts           eye styles, patterns, accessories, sprite anchors
   achievements.ts    the 17 achievements, unlocks and stat counting
+  acts.ts            the 34 acts, walking, and picking what to do next
+  props.ts           the props buddies hold and play with
   color.ts           palette maths
   data.ts            checks for saved data
 types/index.d.ts     the mod's $.state contract
@@ -280,7 +315,8 @@ assets/              README images
 
 ## Roadmap
 
-- **v0.4 (opt-in AI):** a richer personality written by Claude when you create a buddy, `/buddy ask`, rate-limited live quips. Only the buddy's profile and an event label are ever sent.
+- **v0.5:** how each animal behaves: the cat grooms and chases its tail, the dragon puffs smoke, the crab scuttles sideways, the blob splits in two, the robot glitches and charges, the ghost fades, the cactus blooms
+- **v0.6 (opt-in AI):** a richer personality written by Claude when you create a buddy, `/buddy ask`, rate-limited live quips. Only the buddy's profile and an event label are ever sent.
 - **v1.0:** memory and stats ("Day 12 together!"), an optional "speak through Claude" mode, sounds
 
 Issues and pull requests are welcome.

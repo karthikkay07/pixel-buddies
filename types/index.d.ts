@@ -52,8 +52,8 @@ export type Draft = {
   archetype: Archetype | 'auto'
   seed: number
   style: Style
-  /** The animation the studio previews; not saved with the buddy. */
-  preview: Anim
+  /** What the studio previews: an animation, an act's id, `walk` or `work`; not saved with the buddy. */
+  preview: string
 }
 
 /** What the buddy is doing right now and what it last said. */
@@ -68,6 +68,9 @@ export type Mood = {
   /** A thought (drawn as one) rather than something said out loud. */
   isThought: boolean
 }
+
+/** An act the buddy is in the middle of, or a walk (`id` is `walk`) from `from` to `to`. */
+export type ActState = { id: string; since: number; until: number; from: number; to: number }
 
 /** What a person has done with their buddy, counted for achievements. */
 export type Stats = {
@@ -95,6 +98,7 @@ declare module 'claude-code' {
       isHidden: boolean
       mood: Mood
       isAsleep: boolean
+      act: ActState | null
       stats: Stats
       /** Achievement ids earned, in the order they were earned. */
       earned: string[]
