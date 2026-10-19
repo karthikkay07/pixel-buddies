@@ -5,7 +5,20 @@ import { MAX_BUDDIES, cleanActiveId, cleanName, cleanRoster, isColor } from '../
 const ok = { id: 'a', name: 'Alpha', kind: 'crab', color: '#f07858' }
 
 test('a whole roster survives, with colours normalised', async () => {
-  expect(cleanRoster([ok])).toEqual([{ ...ok, color: '#F07858' }])
+  const full = { ...ok, archetype: 'pirate', seed: 4 }
+  expect(cleanRoster([full])).toEqual([{ ...full, color: '#F07858' }])
+})
+
+test('buddies saved by 0.1 upgrade to a personality read from the name', async () => {
+  expect(cleanRoster([ok])).toEqual([{ ...ok, color: '#F07858', archetype: 'auto', seed: 0 }])
+})
+
+test('bad personality fields fall back instead of dropping the buddy', async () => {
+  for (const [archetype, seed] of [['dragon', -1], [42, 1.5], [null, 'x'], ['poet', 5_000_000]] as const) {
+    const [b] = cleanRoster([{ ...ok, archetype, seed }])
+    expect(b?.archetype).toBe(archetype === 'poet' ? 'poet' : 'auto')
+    expect(b?.seed).toBe(0)
+  }
 })
 
 test('anything broken in the store is dropped, never drawn', async () => {

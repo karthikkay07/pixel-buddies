@@ -1,4 +1,6 @@
-import type { BuddyKind } from '../types'
+import type { Anim, BuddyKind } from '../types'
+import { ANIMS, TICK_MS, poseAt } from './animations'
+import type { EffectKind, Pose } from './animations'
 
 // Each sprite is 12x12. Letters: B body, D shade, L highlight, E eye,
 // W eye shine, K ink, '.' empty. The body colours come from the buddy's colour.
@@ -80,9 +82,14 @@ export const COLORS: readonly { value: string; label: string }[] = [
 
 export const NAMES = ['Pixel', 'Bloop', 'Nibbles', 'Sprocket', 'Mochi', 'Zig', 'Pebble', 'Bit']
 
-/** Canvas the sprite sits in: one pixel of margin and a row of room to bob. */
-export const CANVAS_W = 14
-export const CANVAS_H = 14
+/**
+ * The canvas: the 12x12 sprite with room to hop above it, sway either side,
+ * and a column on the right for effects (!, hearts, Zzz, ...).
+ */
+export const CANVAS_W = 19
+export const CANVAS_H = 16
+const SPRITE_X = 2
+const SPRITE_Y = 3
 
 const INK = 0x1e1e24
 const WHITE = 0xffffff
@@ -106,39 +113,84 @@ export function palette(hex: string) {
   return { body, shade: mix(body, 0x000000, 0.35), light: mix(body, WHITE, 0.45) }
 }
 
-export type Frame = { bob: 0 | 1; isBlinking: boolean }
+type Glyph = { color: number; rows: readonly string[]; x: number; y: number }
 
-/** The animation frame at a tick (250ms each); working buddies bob twice as fast. */
-export function frameAt(tick: number, isWorking: boolean): Frame {
-  const bob = (isWorking ? tick % 2 : Math.floor(tick / 2) % 2) as 0 | 1
-  return { bob, isBlinking: tick % 16 === 15 }
+/** Effect glyphs by frame, drawn in the right-hand column. */
+function effectGlyphs(kind: EffectKind, frame: number): Glyph[] {
+  switch (kind) {
+    case 'bang':
+      return [{ color: 0xffd84d, x: 16, y: 1, rows: ['X', 'X', 'X', '.', 'X'] }]
+    case 'dots':
+      return [{ color: 0xd8dbe6, x: 14, y: 2, rows: ['X.X.X'.slice(0, frame * 2 + 1)] }]
+    case 'heart':
+      return [{ color: 0xff5a7a, x: 14, y: 1 - frame, rows: ['XX.XX', 'XXXXX', '.XXX.', '..X..'] }]
+    case 'sparkle':
+      return frame === 0
+        ? [
+            { color: 0xffe066, x: 14, y: 1, rows: ['.X.', 'XXX', '.X.'] },
+            { color: 0xffffff, x: 17, y: 5, rows: ['X'] },
+          ]
+        : [
+            { color: 0xffe066, x: 16, y: 3, rows: ['.X.', 'XXX', '.X.'] },
+            { color: 0xffffff, x: 14, y: 0, rows: ['X'] },
+          ]
+    case 'sweat':
+      return [{ color: 0x7fd3ff, x: 14, y: 3 + frame, rows: ['.X', 'XX', 'XX'] }]
+    case 'zzz':
+      return [{ color: 0xb9c6ff, x: 14 + frame, y: 5 - frame * 2, rows: ['XXXX', '..X.', '.X..', 'XXXX'] }]
+    case 'note':
+      return [{ color: 0x9ee6a0, x: 14, y: frame, rows: ['..XX', '..X.', '..X.', 'XXX.', 'XX..'] }]
+  }
 }
 
-/** The canvas as rows of 0x00RRGGBB colours, or null where empty. */
-export function pixels(kind: BuddyKind, hex: string, frame: Frame): (number | null)[][] {
+/** The canvas for one pose, as rows of 0x00RRGGBB colours, or null where empty. */
+export function pixels(kind: BuddyKind, hex: string, pose: Pose): (number | null)[][] {
   const { body, shade, light } = palette(hex)
   const grid: (number | null)[][] = Array.from({ length: CANVAS_H }, () =>
     Array.from({ length: CANVAS_W }, () => null),
   )
-  const top = 1 + frame.bob
+  const put = (x: number, y: number, color: number) => {
+    const line = grid[y]
+    if (line && x >= 0 && x < CANVAS_W) line[x] = color
+  }
+  const left = SPRITE_X + pose.dx
+  const top = SPRITE_Y + pose.dy
   const rows = SPRITES[kind]
+  const openMouth: [number, number][] = []
+  const wideEyes: [number, number][] = []
   rows.forEach((row, y) => {
     for (let x = 0; x < row.length; x++) {
       const ch = row[x]
-      // A blink closes each eye to a single line at its lowest pixel.
+      // An eye's lowest pixel is its lid: a closed eye is a line there.
       const isLid = ch === 'E' && rows[y + 1]?.[x] !== 'E'
-      const color =
-        ch === 'B' ? body
-        : ch === 'D' ? shade
-        : ch === 'L' ? light
-        : ch === 'K' ? INK
-        : ch === 'W' ? (frame.isBlinking ? body : WHITE)
-        : ch === 'E' ? (frame.isBlinking ? (isLid ? shade : body) : INK)
-        : null
-      const line = grid[top + y]
-      if (color !== null && line) line[1 + x] = color
+      let color: number | null = null
+      if (ch === 'B') color = body
+      else if (ch === 'D') color = shade
+      else if (ch === 'L') color = light
+      else if (ch === 'W') color = pose.eyes === 'open' || pose.eyes === 'wide' ? WHITE : body
+      else if (ch === 'E') {
+        color =
+          pose.eyes === 'closed' ? (isLid ? shade : body)
+          : pose.eyes === 'happy' ? (isLid ? INK : body)
+          : INK
+        // Wide eyes grow a white pixel above each eye.
+        if (pose.eyes === 'wide' && rows[y - 1]?.[x] !== 'E') wideEyes.push([left + x, top + y - 1])
+      } else if (ch === 'K') {
+        color = pose.mouth === 'smile' || pose.mouth === 'open' ? INK : pose.mouth === 'flat' ? shade : body
+        if (pose.mouth === 'open') openMouth.push([left + x, top + y + 1])
+      }
+      if (color !== null) put(left + x, top + y, color)
     }
   })
+  for (const [x, y] of openMouth) put(x, y, INK)
+  for (const [x, y] of wideEyes) put(x, y, WHITE)
+  if (pose.effect) {
+    for (const g of effectGlyphs(pose.effect.kind, pose.effect.frame)) {
+      g.rows.forEach((row, dy) => {
+        for (let dx = 0; dx < row.length; dx++) if (row[dx] === 'X') put(g.x + dx, g.y + dy, g.color)
+      })
+    }
+  }
   return grid
 }
 
@@ -146,9 +198,9 @@ const DEFAULT = 0x01000000
 const UPPER = 0x2580 // ▀
 const LOWER = 0x2584 // ▄
 
-/** Raster cells: two pixels per terminal cell with half blocks. */
-export function rasterCells(kind: BuddyKind, hex: string, frame: Frame): string {
-  const grid = pixels(kind, hex, frame)
+/** Raster cells for one tick of an animation: two pixels per terminal cell. */
+export function rasterCells(kind: BuddyKind, hex: string, anim: Anim, tick: number): string {
+  const grid = pixels(kind, hex, poseAt(anim, tick))
   const rows = CANVAS_H / 2
   const words = new Uint32Array(CANVAS_W * rows * 3)
   for (let r = 0; r < rows; r++) {
@@ -185,29 +237,63 @@ function hexOf(rgb: number): string {
   return '#' + rgb.toString(16).padStart(6, '0')
 }
 
-function rects(grid: (number | null)[][]): string {
+/** One frame as a path per colour, each row's runs merged: small enough to hold many frames. */
+function paths(grid: (number | null)[][]): string {
+  const byColor = new Map<number, string>()
+  grid.forEach((row, y) => {
+    let x = 0
+    while (x < row.length) {
+      const c = row[x]
+      if (c === null || c === undefined) {
+        x++
+        continue
+      }
+      let end = x + 1
+      while (end < row.length && row[end] === c) end++
+      byColor.set(c, (byColor.get(c) ?? '') + `M${x} ${y}h${end - x}v1h-${end - x}z`)
+      x = end
+    }
+  })
   let out = ''
-  grid.forEach((row, y) =>
-    row.forEach((c, x) => {
-      if (c !== null) out += `<rect x="${x}" y="${y}" width="1" height="1" fill="${hexOf(c)}"/>`
-    }),
-  )
+  for (const [c, d] of byColor) out += `<path fill="${hexOf(c)}" d="${d}"/>`
   return out
 }
 
-/** An SVG that animates itself (bob + blink) with SMIL, for the desktop surfaces. */
-export function svgSource(kind: BuddyKind, hex: string, isWorking: boolean): string {
-  const open = pixels(kind, hex, { bob: 0, isBlinking: false })
-  const closed = pixels(kind, hex, { bob: 0, isBlinking: true })
-  // Only the eye pixels differ between the two; draw those as a blinking overlay.
-  const lids = closed.map((row, y) => row.map((c, x) => (c !== open[y]?.[x] ? c : null)))
-  const bob = isWorking ? '0.5s' : '1s'
-  return (
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" shape-rendering="crispEdges">` +
-    `<g><animateTransform attributeName="transform" type="translate" values="0 0;0 1" dur="${bob}" calcMode="discrete" repeatCount="indefinite"/>` +
-    rects(open) +
-    `<g opacity="0"><animate attributeName="opacity" values="0;1;0" keyTimes="0;0.94;0.97" dur="4s" calcMode="discrete" repeatCount="indefinite"/>` +
-    rects(lids) +
-    `</g></g></svg>`
-  )
+function fraction(n: number): string {
+  return String(Math.round(n * 10000) / 10000)
+}
+
+/**
+ * An SVG that plays a whole animation by itself (SMIL), for the desktop
+ * surfaces: each distinct frame is a group shown for its share of the cycle.
+ */
+export function svgSource(kind: BuddyKind, hex: string, anim: Anim): string {
+  const { length } = ANIMS[anim]
+  const segments: { svg: string; start: number; end: number }[] = []
+  for (let t = 0; t < length; t++) {
+    const svg = paths(pixels(kind, hex, poseAt(anim, t)))
+    const last = segments[segments.length - 1]
+    if (last && last.svg === svg) last.end = t + 1
+    else segments.push({ svg, start: t, end: t + 1 })
+  }
+  const dur = `${(length * TICK_MS) / 1000}s`
+  let body = ''
+  if (segments.length === 1) {
+    body = segments[0]?.svg ?? ''
+  } else {
+    for (const seg of segments) {
+      const s = seg.start / length
+      const e = seg.end / length
+      const [values, times] =
+        s === 0 ? ['visible;hidden', `0;${fraction(e)}`]
+        : e === 1 ? ['hidden;visible', `0;${fraction(s)}`]
+        : ['hidden;visible;hidden', `0;${fraction(s)};${fraction(e)}`]
+      body +=
+        `<g visibility="${s === 0 ? 'visible' : 'hidden'}">` +
+        `<animate attributeName="visibility" values="${values}" keyTimes="${times}" dur="${dur}" calcMode="discrete" repeatCount="indefinite"/>` +
+        seg.svg +
+        '</g>'
+    }
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" shape-rendering="crispEdges">${body}</svg>`
 }

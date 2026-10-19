@@ -1,6 +1,7 @@
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 
-import { CANVAS_H, CANVAS_W, KINDS, SPRITES, frameAt, pixels, rasterCells, svgSource } from '../hooks/sprites'
+import { ANIMS, ANIM_NAMES, poseAt } from '../hooks/animations'
+import { CANVAS_H, CANVAS_W, KINDS, SPRITES, pixels, rasterCells, svgSource } from '../hooks/sprites'
 
 const BAND = {
   component: 'AbovePrompt',
@@ -24,20 +25,30 @@ test('every sprite is 12x12 and uses only known letters', async () => {
   }
 })
 
-test('frames bob, blink, and draw into the canvas', async () => {
-  expect(frameAt(0, false)).toEqual({ bob: 0, isBlinking: false })
-  expect(frameAt(2, false).bob).toBe(1)
-  expect(frameAt(1, true).bob).toBe(1)
-  expect(frameAt(15, false).isBlinking).toBe(true)
-  const grid = pixels('crab', '#F07858', frameAt(0, false))
+test('every animation draws for every type, in the terminal and as SVG', async () => {
+  for (const { value: kind } of KINDS) {
+    for (const anim of ANIM_NAMES) {
+      // 19x8 cells of 3 u32s = 1824 bytes = 2432 base64 characters.
+      expect(rasterCells(kind, '#4FA3E0', anim, 3).length).toBe(2432)
+      const svg = svgSource(kind, '#9B6BDB', anim)
+      expect(svg.startsWith('<svg')).toBe(true)
+      expect(svg.length < 131072).toBe(true)
+      expect(svg.includes('<animate')).toBe(true)
+    }
+  }
+})
+
+test('poses loop, bob, blink and float their effects', async () => {
+  expect(poseAt('idle', 0)).toEqual(poseAt('idle', ANIMS.idle.length))
+  expect(poseAt('idle', -1)).toEqual(poseAt('idle', ANIMS.idle.length - 1))
+  expect(poseAt('idle', 4).dy).toBe(1)
+  expect(poseAt('idle', 31).eyes).toBe('closed')
+  expect(poseAt('happy', 3).dy).toBe(-3)
+  expect(poseAt('sleeping', 0).effect?.kind).toBe('zzz')
+  expect(poseAt('sad', 0).eyes).toBe('sad')
+  const grid = pixels('crab', '#F07858', poseAt('surprised', 0))
   expect(grid.length).toBe(CANVAS_H)
   expect(grid.every(row => row.length === CANVAS_W)).toBe(true)
-  // 14x7 cells of 3 u32s = 1176 bytes = 1568 base64 characters.
-  expect(rasterCells('robot', '#4FA3E0', frameAt(3, true)).length).toBe(1568)
-  const svg = svgSource('ghost', '#9B6BDB', true)
-  expect(svg.startsWith('<svg')).toBe(true)
-  expect(svg.includes('dur="0.5s"')).toBe(true)
-  expect(svg.length < 131072).toBe(true)
 })
 
 test('make a buddy in the studio and see it above the prompt', async ($, on) => {
@@ -52,6 +63,7 @@ test('make a buddy in the studio and see it above the prompt', async ($, on) => 
     toasts.push(e.text)
     return { value: undefined }
   })
+  mock.clock(on)
   for (const surface of ['terminal', 'desktop'] as const) {
     const band = await $.ui.mount({ plugin: 'pixel-buddies', surface, ...BAND })
     if (surface === 'terminal') {
@@ -77,5 +89,5 @@ test('make a buddy in the studio and see it above the prompt', async ($, on) => 
   expect(roster.map(b => b.name)).toEqual(['Sprocket-desktop'])
   expect(roster[0]?.kind).toBe('robot')
   expect(roster[0]?.color).toBe('#3CC48C')
-  expect(toasts).toEqual(['Sprocket-terminal the robot is ready.', 'Sprocket-desktop the robot is ready.'])
+  expect(toasts).toEqual(['Sprocket-terminal the nerd robot is ready.', 'Sprocket-desktop the nerd robot is ready.'])
 })

@@ -1,11 +1,39 @@
 {
   "name": "pixel-buddies",
-  "version": "0.1.1",
-  "description": "Design an animated pixel-art buddy (type, colour, name) that lives above your prompt.",
-  "author": { "name": "karthikkay07", "url": "https://github.com/karthikkay07" },
+  "version": "0.2.0",
+  "description": "Design an animated pixel-art buddy with its own personality. It lives above your prompt, reacts to your work and thinks out loud.",
+  "author": {
+    "name": "karthikkay07",
+    "url": "https://github.com/karthikkay07"
+  },
   "homepage": "https://github.com/karthikkay07/pixel-buddies",
   "repository": "https://github.com/karthikkay07/pixel-buddies",
   "license": "MIT",
-  "keywords": ["mod", "pixel-art", "companion", "fun"],
-  "types": "./types/index.d.ts"
+  "keywords": [
+    "mod",
+    "pixel-art",
+    "companion",
+    "fun"
+  ],
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "chattiness": {
+      "type": "string",
+      "title": "Chattiness",
+      "description": "How much your buddy talks: silent (animations only), quiet (big moments), normal, or chaotic.",
+      "default": "normal",
+      "options": [
+        "silent",
+        "quiet",
+        "normal",
+        "chaotic"
+      ]
+    },
+    "sleepAfterMinutes": {
+      "type": "number",
+      "title": "Fall asleep after (minutes idle)",
+      "description": "Minutes without activity before your buddy dozes off. 0 never sleeps.",
+      "default": 10
+    }
+  }
 }

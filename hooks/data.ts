@@ -1,4 +1,5 @@
 import type { Buddy, BuddyKind } from '../types'
+import { isArchetype } from './personality'
 import { KINDS } from './sprites'
 
 export const MAX_NAME = 24
@@ -29,12 +30,20 @@ export function cleanRoster(value: unknown): Buddy[] {
   const out: Buddy[] = []
   for (const item of value) {
     if (typeof item !== 'object' || item === null) continue
-    const { id, name, kind, color } = item as Record<string, unknown>
+    const { id, name, kind, color, archetype, seed } = item as Record<string, unknown>
     const clean = cleanName(name)
     if (typeof id !== 'string' || id === '' || seen.has(id)) continue
     if (!clean || !isKind(kind) || !isColor(color)) continue
     seen.add(id)
-    out.push({ id, name: clean, kind, color: color.toUpperCase() })
+    // Buddies saved by 0.1 have no personality fields: they read theirs from the name.
+    out.push({
+      id,
+      name: clean,
+      kind,
+      color: color.toUpperCase(),
+      archetype: isArchetype(archetype) ? archetype : 'auto',
+      seed: cleanSeed(seed),
+    })
     if (out.length === MAX_BUDDIES) break
   }
   return out
@@ -43,4 +52,8 @@ export function cleanRoster(value: unknown): Buddy[] {
 /** The saved active id, if it still names a buddy; else the first, or none. */
 export function cleanActiveId(value: unknown, roster: readonly Buddy[]): string | null {
   return roster.some(b => b.id === value) ? (value as string) : (roster[0]?.id ?? null)
+}
+
+export function cleanSeed(value: unknown): number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value < 1_000_000 ? value : 0
 }
