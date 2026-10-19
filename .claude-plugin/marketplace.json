@@ -1,0 +1,12 @@
+{
+  "name": "pixel-buddies",
+  "description": "Pixel Buddies: animated pixel-art companions for Claude Code.",
+  "owner": { "name": "karthikkay07" },
+  "plugins": [
+    {
+      "name": "pixel-buddies",
+      "source": "./",
+      "description": "Design an animated pixel-art buddy (type, colour, name) that lives above your prompt."
+    }
+  ]
+}
