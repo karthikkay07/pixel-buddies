@@ -1,7 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Buddy, BuddyKind, Draft } from '../types'
+import type { Buddy, Draft } from '../types'
+import { MAX_BUDDIES, MAX_NAME, cleanActiveId, cleanName, cleanRoster, isKind } from './data'
 import {
   CANVAS_H,
   CANVAS_W,
@@ -14,7 +15,6 @@ import {
 } from './sprites'
 
 const STUDIO = 'buddy-studio'
-const MAX_NAME = 24
 
 const draft = atom({ plugin: 'pixel-buddies', key: 'draft' } as const, {
   name: '',
@@ -32,10 +32,6 @@ const MOODS = {
 
 function pick<T>(list: readonly [T, ...T[]] | readonly T[]): T {
   return list[Math.floor(Math.random() * list.length)] ?? (list[0] as T)
-}
-
-function isKind(value: string): value is BuddyKind {
-  return KINDS.some(k => k.value === value)
 }
 
 async function activeBuddy($: EngineInterface): Promise<Buddy | null> {
@@ -61,8 +57,13 @@ async function openStudio($: EngineInterface) {
 
 async function saveDraft($: EngineInterface, asNew: boolean) {
   const d = await read($, draft)
-  const name = d.name.trim().slice(0, MAX_NAME) || pick(NAMES)
+  const name = cleanName(d.name) || pick(NAMES)
   const current = await activeBuddy($)
+  const isAdding = asNew || !current
+  if (isAdding && (await read($, roster)).length >= MAX_BUDDIES) {
+    $.ui.toast(`You have ${MAX_BUDDIES} buddies already. Delete one to make room.`)
+    return
+  }
   const id = !asNew && current ? current.id : `b${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`
   const buddy: Buddy = { id, name, kind: d.kind, color: d.color }
   await update($, roster, list =>
@@ -86,12 +87,13 @@ let isStarted = false
 async function start($: EngineInterface) {
   if (isStarted) return
   isStarted = true
-  const saved = await $.store.get('roster')
-  const savedActive = await $.store.get('activeId')
-  const savedHidden = await $.store.get('isHidden')
-  await update($, roster, () => (Array.isArray(saved) ? (saved as Buddy[]) : []))
-  await update($, activeId, () => (typeof savedActive === 'string' ? savedActive : null))
-  await update($, isHidden, () => savedHidden === true)
+  // Whatever the store holds is checked before anything draws it.
+  const saved = cleanRoster(await $.store.get('roster'))
+  const savedActive = cleanActiveId(await $.store.get('activeId'), saved)
+  const savedHidden = (await $.store.get('isHidden')) === true
+  await update($, roster, () => saved)
+  await update($, activeId, () => savedActive)
+  await update($, isHidden, () => savedHidden)
 
   await $.command.register({
     name: 'buddy',

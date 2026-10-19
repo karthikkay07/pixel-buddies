@@ -10,6 +10,12 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/karthikkay07/pixel-buddies/actions/workflows/ci.yml"><img src="https://github.com/karthikkay07/pixel-buddies/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/karthikkay07/pixel-buddies/releases"><img src="https://img.shields.io/github/v/release/karthikkay07/pixel-buddies" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT license"></a>
+</p>
+
+<p align="center">
   <a href="#install">Install</a> ·
   <a href="#usage">Usage</a> ·
   <a href="#how-it-works">How it works</a> ·
@@ -27,6 +33,7 @@
 - **A whole roster:** save several buddies, switch between them and delete old ones. They're remembered across sessions.
 - **Real pixel art everywhere:** half-block cells repainted at 4 fps in the terminal, and a self-animating SVG in the Claude desktop app.
 - **Private and offline:** no network calls and no model calls. Everything stays on your machine.
+- **Robust:** saved data is checked when it loads, so a corrupted or hand-edited store can't break the band.
 
 ### The cast
 
@@ -84,7 +91,7 @@ claude plugin uninstall pixel-buddies
 | **Surprise me** | `r` | Random type, colour and name |
 | **Use / Delete** | — | Manage your roster at the bottom of the panel |
 
-Press **Esc** to close the studio. Once a buddy exists, the studio opens on that buddy, so tweaking it is a single save.
+You can keep up to 50 buddies. Press **Esc** to close the studio. Once a buddy exists, the studio opens on that buddy, so tweaking it is a single save.
 
 ## How it works
 
@@ -97,7 +104,7 @@ Pixel Buddies is a **mod**: a single TypeScript hooks module that Claude Code lo
 | Buddy above the prompt | a `ui.render` hook for `AbovePrompt`; `e.props.isWorking` drives the "Claude is working" mood |
 | Terminal animation | a `Raster` element, repainted in place by `$.ui.blit` on a 250 ms `$.clock.every` timer |
 | Desktop animation | an `Svg` element with SMIL `<animateTransform>` (bob) and `<animate>` (blink), with no timers |
-| Saved buddies | `$.store` (a JSON file in your Claude Code config directory) |
+| Saved buddies | `$.store` (a JSON file in your Claude Code config directory), checked on load by [`hooks/data.ts`](hooks/data.ts) |
 | Live UI state | `atom` / `read` / `update` over `$.state`, so a change redraws whatever reads it |
 
 Sprites are 12×12 strings in [`hooks/sprites.ts`](hooks/sprites.ts). Each letter is a role (`B` body, `D` shade, `L` highlight, `E` eye, `W` eye shine, `K` ink), so one drawing works in every colour. Shade and highlight are mixed from the body colour.
@@ -120,7 +127,15 @@ claude plugin validate .
 claude plugin test .
 ```
 
-`validate` checks the manifest, the marketplace file and the hooks module the way the engine will load them. `test` runs [`tests/buddy.test.tsx`](tests/buddy.test.tsx), which checks the sprite data, the frame logic, and a full studio-to-band flow on both the `terminal` and `desktop` surfaces.
+`validate` checks the manifest, the marketplace file and the hooks module the way the engine will load them. `test` runs three suites:
+
+| Suite | Covers |
+|---|---|
+| [`tests/buddy.test.tsx`](tests/buddy.test.tsx) | Sprite data, animation frames, and the studio → save → band flow on the `terminal` and `desktop` surfaces |
+| [`tests/lifecycle.test.tsx`](tests/lifecycle.test.tsx) | Restoring at session start (from a partly broken store), `/buddy hide` and `show`, switching, Save as new, and Delete down to the empty state |
+| [`tests/data.test.ts`](tests/data.test.ts) | The store checks: bad entries dropped, names cleaned, roster capped, active-id fallback |
+
+[CI](.github/workflows/ci.yml) runs both commands on Ubuntu and Windows for every push and pull request, pinned to a known Claude Code version.
 
 For editor type-checking, load the mod once (Claude Code writes its typings to `.claude-plugin/types/`), then run `tsc -p .`.
 
@@ -140,8 +155,10 @@ hooks/
   hooks.json         points at register.tsx
   register.tsx       commands, studio pane, band, timers
   sprites.ts         pixel data, palette, frames, Raster and SVG encoders
+  data.ts            checks for saved data (roster, names, colours)
 types/index.d.ts     the mod's $.state contract
-tests/               claude plugin test suite
+tests/               claude plugin test suites
+.github/workflows/   CI: validate + test on Ubuntu and Windows
 assets/              README images
 ```
 

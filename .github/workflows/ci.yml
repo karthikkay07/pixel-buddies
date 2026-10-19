@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Validate and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Pinned: mods are early access and their API can change between releases.
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code@2.1.303
+
+      - name: Validate manifest, marketplace and hooks module
+        run: claude plugin validate .
+
+      - name: Run tests
+        run: claude plugin test .
