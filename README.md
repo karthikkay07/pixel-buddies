@@ -1,12 +1,13 @@
 <p align="center">
-  <img src="assets/hero.svg" alt="Four pixel buddies: Captain Bolt the pirate crab waving, Sunny the cheerleader blob celebrating, Sprocket the nerd robot thinking, and Sleepy Mochi the ghost asleep" width="708">
+  <img src="assets/hero.svg" alt="Four pixel buddies: Captain Bolt the pirate crab in shades waving, Sunny the spotted cheerleader cat in a party hat celebrating, Sprocket the nerd robot in headphones thinking, and Sleepy Mochi the crowned dragon asleep" width="708">
 </p>
 
 <h1 align="center">Pixel Buddies</h1>
 
 <p align="center">
   A tiny animated pixel-art companion with its own personality, living above your prompt in Claude Code.<br>
-  Pick a type, a colour and a name. It reacts to your work, cheers your wins, sulks at errors, and thinks out loud.
+  Pick a type, a colour and a name. It reacts to your work, cheers your wins, sulks at errors, and thinks out loud.<br>
+  Use it, earn achievements, and unlock new types, eyes, patterns and accessories.
 </p>
 
 <p align="center">
@@ -19,6 +20,7 @@
   <a href="#install">Install</a> ·
   <a href="#usage">Usage</a> ·
   <a href="#personalities">Personalities</a> ·
+  <a href="#achievements">Achievements</a> ·
   <a href="#settings">Settings</a> ·
   <a href="#how-it-works">How it works</a> ·
   <a href="#development">Development</a> ·
@@ -37,6 +39,7 @@
   - celebrates passing tests and successful builds
   - wobbles sadly at errors
   - stretches after a long job
+- **A wardrobe to earn:** 7 types, 6 eye styles, 5 patterns, 8 accessories and any colour you like. **17 achievements** from real use unlock them, and you can try on anything locked to see what you're working toward.
 - **Random thoughts:** between tasks it thinks out loud ("💭 If a function is never called, does it truly exist?"), paced by its personality and your chattiness setting.
 - **Falls asleep when you're away** (Zzz…) and wakes up when you're back.
 - **9 animations:** idle, typing, thinking, happy, celebrate, sad, surprised, sleeping and wave, with floating effects (hearts, sparkles, sweat drops, Zzz, !).
@@ -44,11 +47,20 @@
 - **Private and offline:** no network calls and no model calls. Every line your buddy says is written into the mod, and nothing about your code leaves your machine.
 - **Robust:** saved data is checked when it loads, and the buddy can never block a prompt or a tool call.
 
-### The cast
+### The wardrobe
 
-| Types and colours | Animations |
+<p align="center"><img src="assets/showcase.png" alt="Eight dressed-up buddies: a crowned dragon with love eyes, a spotted cat in a party hat, a cactus with a flower, a robot in headphones, an angry ghost in shades, a blob in a beanie, a crab in a scarf and a cat with a bow" width="640"></p>
+
+| Every type × every accessory | Eye styles, then patterns |
 |---|---|
-| <img src="assets/sprite-sheet.png" alt="Sprite sheet: crab, blob, robot and ghost in four colours" width="220"><br>Crab, Blob, Robot, Ghost<br>Coral, Sky, Mint, Sunny, Grape, Rose, Slate | <img src="assets/animations.png" alt="Animation sheet: idle, typing, thinking, happy, celebrate, sad, surprised, sleeping and wave, five frames each" width="420"> |
+| <img src="assets/wardrobe.png" alt="Seven types (crab, blob, robot, ghost, cat, dragon, cactus) each shown with no accessory, crown, party hat, beanie, bow, flower, headphones, shades and scarf" width="420"> | <img src="assets/eyes-patterns.png" alt="Seven types with classic, dots, big, sleepy, angry and love eyes, then plain, spots, stripes, belly and gradient patterns" width="420"> |
+
+<details>
+<summary>All 9 animations</summary>
+
+<img src="assets/animations.png" alt="Animation sheet: idle, typing, thinking, happy, celebrate, sad, surprised, sleeping and wave, five frames each" width="560">
+
+</details>
 
 ## Install
 
@@ -87,6 +99,7 @@ claude plugin uninstall pixel-buddies
 |---|---|
 | `/buddy` | Opens the **Buddy studio** panel |
 | `/buddy poke` | Pokes your buddy. It always reacts. |
+| `/buddy achievements` | Lists every achievement with your progress and what it unlocks |
 | `/buddy hide` | Hides your buddy (it's remembered) |
 | `/buddy show` | Brings it back |
 
@@ -94,18 +107,20 @@ claude plugin uninstall pixel-buddies
 
 | Control | Key | Action |
 |---|---|---|
-| **Type** picker | arrows + Enter | Crab, Blob, Robot or Ghost |
-| **Colour** picker | arrows + Enter | Seven colours |
+| **Type** picker | arrows + Enter | Crab, Blob, Robot, Ghost, and 🔒 Cat, Dragon, Cactus |
+| **Colour** picker | arrows + Enter | Seven preset colours |
+| **Custom** field | type a hex, Enter | Any colour, like `#FF8800` (🔒 until *Artist*) |
 | **Name** field | type, Enter to save | Up to 24 characters. Left empty, a name is picked for you. |
 | **Personality** picker | arrows + Enter | *Auto (from the name)*, or one of the 8 archetypes |
 | **Reroll** | `p` | Rolls a different personality for an *Auto* buddy |
+| **Eyes** · **Pattern** · **Accessory** pickers | arrows + Enter | Dress your buddy up (🔒 marks what's still locked) |
 | **Preview** picker | arrows + Enter | Plays any of the 9 animations in the preview |
 | **Save buddy / Save changes** | `s` | Saves and makes it your active buddy (it says hello) |
 | **Save as new** | `n` | Keeps the current buddy and adds this design as a new one |
-| **Surprise me** | `r` | Random type, colour, name and personality |
+| **Surprise me** | `r` | Random type, colour, name, personality and style, from what you've unlocked |
 | **Use / Delete** | — | Manage your roster at the bottom of the panel |
 
-The studio shows the personality as you type the name: its archetype, energy, chattiness, traits and a sample line. You can keep up to 50 buddies. Press **Esc** to close the studio.
+The studio shows the personality as you type the name: its archetype, energy, chattiness, traits and a sample line. **Locked items can be tried on:** pick one and the preview wears it, but saving tells you what to do to unlock it. Your achievements and progress are listed at the bottom. You can keep up to 50 buddies. Press **Esc** to close the studio.
 
 ## Personalities
 
@@ -135,6 +150,34 @@ With *Auto*, the first word of the name that matches a keyword decides ("Captain
 | nothing happens for a while | thinks out loud (💭) |
 | you're away past the sleep timer | falls asleep (Zzz) and wakes up when you're back |
 
+## Achievements
+
+You start with the 4 original types, 7 colours, classic eyes, a plain pattern and no accessory. Everything else is earned by using Claude Code with your buddy:
+
+| Achievement | Goal | Unlocks |
+|---|---|---|
+| 🏆 **Hello, friend** | Make your first buddy | Dots eyes, Belly pattern |
+| 🏆 **Chatterbox** | Send 25 prompts | Spots pattern |
+| 🏆 **Green light** | Pass tests or a build 3 times | Party hat |
+| 🏆 **Best friends** | Poke your buddy 10 times | Love eyes |
+| 🏆 **Collector** | Make 3 buddies | Bow |
+| 🏆 **Regular** | Use Claude Code on 3 different days | Cat |
+| 🏆 **Cosy** | Start 10 sessions | Scarf |
+| 🏆 **Bounce back** | Survive 10 errors | Angry eyes |
+| 🏆 **Deep thinker** | Hear 15 random thoughts | Big & shiny eyes |
+| 🏆 **Hard worker** | Watch Claude run 100 tools | Headphones |
+| 🏆 **Marathon** | Finish 5 long jobs (45 s or more) | Stripes pattern |
+| 🏆 **Artist** | Use Claude Code on 5 different days | Custom colour |
+| 🏆 **Night owl** | Send 10 prompts between midnight and 5 am | Sleepy eyes, Beanie |
+| 🏆 **Green thumb** | Send 100 prompts | Cactus, Flower |
+| 🏆 **Devoted** | Use Claude Code on 7 different days | Dragon, Gradient pattern |
+| 🏆 **Champion** | Pass tests or a build 25 times | Crown |
+| 🏆 **Cool customer** | Watch Claude run 500 tools | Shades |
+
+When you earn one, a toast says what you unlocked and your buddy celebrates. Run `/buddy achievements` or open the studio to see your progress.
+
+Only **counts** are kept (how many prompts, tool calls, wins and so on, plus the last day you were active), in the mod's own store on your machine. Nothing about what you typed or what Claude did is saved. Buddies made before 0.3 count toward *Hello, friend* and *Collector*.
+
 ## Settings
 
 Change these from Claude Code's config menu (`/config` in a terminal session), or in `settings.json` under `pluginConfigs["pixel-buddies"].options`.
@@ -160,10 +203,11 @@ Pixel Buddies is a **mod**: a TypeScript hooks module that Claude Code loads in 
 | Terminal animation | a `Raster` element repainted in place by `$.ui.blit` every 125 ms |
 | Desktop animation | an `Svg` element where each distinct frame is a group toggled by SMIL `<animate>`, so it needs no timers |
 | Saved buddies | `$.store`, checked on load by [`hooks/data.ts`](hooks/data.ts) |
-| Live state | `atom` / `read` / `update` over `$.state` (`mood`, `isAsleep`, …), so a change redraws whatever reads it |
+| Live state | `atom` / `read` / `update` over `$.state` (`mood`, `isAsleep`, `stats`, `earned`, …), so a change redraws whatever reads it |
+| Achievements | counts bumped from the same hooks, checked against [`hooks/achievements.ts`](hooks/achievements.ts), saved to `$.store` on the brain tick and at `session.end` |
 | Settings | `userConfig` in `plugin.json`, read from `register(on, options)` |
 
-Sprites are 12×12 strings in [`hooks/sprites.ts`](hooks/sprites.ts). Each letter is a role (`B` body, `D` shade, `L` highlight, `E` eye, `W` eye shine, `K` mouth), so one drawing works in every colour and every expression. An animation in [`hooks/animations.ts`](hooks/animations.ts) is a function from tick to **pose**: offset, eyes (`open`, `closed`, `happy`, `wide`, `sad`), mouth (`smile`, `open`, `flat`, `none`) and an effect. The renderer turns any pose of any sprite into pixels. Personalities, lines and reaction rules live in [`hooks/personality.ts`](hooks/personality.ts).
+Sprites are 12×12 strings in [`hooks/sprites.ts`](hooks/sprites.ts). Each letter is a role (`B` body, `D` shade, `L` highlight, `E` eye, `W` eye shine, `K` mouth), so one drawing works in every colour and every expression. An animation in [`hooks/animations.ts`](hooks/animations.ts) is a function from tick to **pose**: offset, eyes (`open`, `closed`, `happy`, `wide`, `sad`), mouth (`smile`, `open`, `flat`, `none`) and an effect. The renderer turns any pose of any sprite into pixels. A **look** (type, colour and style) is layered on top: patterns recolour body pixels, eye styles recolour the eyes and add shine or brows, and accessories are stamped at **anchors** read from the sprite's letters (eyes, head top, mouth), so a new type wears every accessory with no extra numbers. See [`hooks/style.ts`](hooks/style.ts). Personalities, lines and reaction rules live in [`hooks/personality.ts`](hooks/personality.ts).
 
 ## Development
 
@@ -183,7 +227,7 @@ claude plugin validate .
 claude plugin test .
 ```
 
-`validate` checks the manifest, the marketplace file and the hooks module the way the engine will load them. `test` runs 29 tests in five suites:
+`validate` checks the manifest, the marketplace file and the hooks module the way the engine will load them. `test` runs 43 tests in seven suites:
 
 | Suite | Covers |
 |---|---|
@@ -191,7 +235,9 @@ claude plugin test .
 | [`tests/personality.test.ts`](tests/personality.test.ts) | Lines for every archetype and event, name → personality, rerolls, chattiness levels, no-repeat lines, thought pacing, reading tool results |
 | [`tests/mood.test.tsx`](tests/mood.test.tsx) | Hello on session start, poke, falling asleep and waking on the mock clock, silent mode |
 | [`tests/lifecycle.test.tsx`](tests/lifecycle.test.tsx) | Restoring from a partly broken store, `/buddy hide` and `show`, switching, Save as new, Delete |
-| [`tests/data.test.ts`](tests/data.test.ts) | Store checks, including upgrading 0.1 buddies |
+| [`tests/achievements.test.ts`](tests/achievements.test.ts) | Every item free or earned by exactly one achievement, progress, unlocking, day counting, accessory anchors on every type |
+| [`tests/unlocks.test.tsx`](tests/unlocks.test.tsx) | Trying on locked items and being stopped at save, earning *Best friends* by poking and saving love eyes, custom colours after *Artist* |
+| [`tests/data.test.ts`](tests/data.test.ts) | Store checks: buddies, styles, stats and earned achievements, including upgrades from 0.1 and 0.2 |
 
 [CI](.github/workflows/ci.yml) runs both commands on Ubuntu and Windows for every push and pull request, pinned to a known Claude Code version.
 
@@ -199,9 +245,10 @@ For editor type-checking, load the mod once (Claude Code writes its typings to `
 
 ### Add a new buddy type
 
-1. Draw a 12×12 sprite in `SPRITES` in `hooks/sprites.ts`, using the letters above. Mark eyes with `E` (and `W` for shine) and the mouth with `K`, so every expression works.
+1. Draw a 12×12 sprite in `SPRITES` in `hooks/sprites.ts`, using the letters above. Mark eyes with `E` (and `W` for shine) and the mouth with `K`, so every expression, eye style and accessory works.
 2. Add it to `KINDS` there and to `BuddyKind` in `types/index.d.ts`.
-3. Run `claude plugin test .`. The tests draw every animation for it.
+3. Make it free (`FREE`) or a reward of an achievement in `hooks/achievements.ts`.
+4. Run `claude plugin test .`. The tests draw every animation and accessory for it, and check that it's unlockable.
 
 ### Add a personality
 
@@ -220,7 +267,10 @@ hooks/
   register.tsx       commands, studio, band, reactions, brain and paint timers
   personality.ts     archetypes, lines, name → personality, reaction rules
   animations.ts      the 9 animations as tick → pose
-  sprites.ts         pixel data, palette, effects, Raster and SVG encoders
+  sprites.ts         pixel data, effects, Raster and SVG encoders
+  style.ts           eye styles, patterns, accessories, sprite anchors
+  achievements.ts    the 17 achievements, unlocks and stat counting
+  color.ts           palette maths
   data.ts            checks for saved data
 types/index.d.ts     the mod's $.state contract
 tests/               claude plugin test suites
@@ -230,7 +280,6 @@ assets/              README images
 
 ## Roadmap
 
-- **v0.3:** accessories (hats, glasses, headphones), eye styles, patterns, a custom hex colour, new types (cat, dragon, cactus)
 - **v0.4 (opt-in AI):** a richer personality written by Claude when you create a buddy, `/buddy ask`, rate-limited live quips. Only the buddy's profile and an event label are ever sent.
 - **v1.0:** memory and stats ("Day 12 together!"), an optional "speak through Claude" mode, sounds
 

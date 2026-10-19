@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.0 — 2026-10-19
+
+Dress up your buddy, and earn it.
+
+- **Achievements:** 17 achievements earned from real use (prompts, tools run, tests and builds passed, errors survived, long jobs, active days, sessions, pokes, thoughts heard, buddies made, late-night prompts). Earning one shows a toast and your buddy celebrates. `/buddy achievements` and the studio show your progress.
+- **Unlockable wardrobe:**
+  - 3 new types: Cat, Dragon, Cactus
+  - 5 eye styles: Dots, Big & shiny, Sleepy, Angry, Love
+  - 4 patterns: Spots, Stripes, Belly, Gradient
+  - 8 accessories: Crown, Party hat, Beanie, Bow, Flower, Headphones, Shades, Scarf
+  - any custom hex colour
+- **Try before you earn:** locked items show a 🔒 in the studio and can be previewed, but saving them tells you how to unlock them.
+- Accessories sit at anchors read from each sprite (eyes, head top, mouth), so every type wears every accessory.
+- The canvas is two pixels taller to fit hats (9 terminal rows).
+- Only counts are stored, locally. Buddies made before 0.3 count toward *Hello, friend* and *Collector*, and get the default style.
+- A silent buddy celebrates achievements without speaking.
+- 43 tests across 7 suites (up from 29).
+
 ## 0.2.0 — 2026-10-19
 
 Buddies come alive.

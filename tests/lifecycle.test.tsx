@@ -19,7 +19,7 @@ test('restore, hide and show, switch, save as new, and delete', async ($, on) =>
     roster: [
       { id: 'a', name: 'Alpha', kind: 'crab', color: '#F07858' },
       { id: 'b', name: 'Beta', kind: 'ghost', color: '#9B6BDB' },
-      { id: 'x', name: 'Broken', kind: 'dragon', color: '#000000' },
+      { id: 'x', name: 'Broken', kind: 'unicorn', color: '#000000' },
       'junk',
     ],
     activeId: 'gone',

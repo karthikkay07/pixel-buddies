@@ -1,16 +1,18 @@
 import { expect, test } from 'claude-code/testing'
 
-import { MAX_BUDDIES, cleanActiveId, cleanName, cleanRoster, isColor } from '../hooks/data'
+import { EMPTY_STATS } from '../hooks/achievements'
+import { MAX_BUDDIES, cleanActiveId, cleanEarned, cleanName, cleanRoster, cleanStats, cleanStyle, isColor } from '../hooks/data'
+import { DEFAULT_STYLE } from '../hooks/style'
 
 const ok = { id: 'a', name: 'Alpha', kind: 'crab', color: '#f07858' }
 
 test('a whole roster survives, with colours normalised', async () => {
-  const full = { ...ok, archetype: 'pirate', seed: 4 }
+  const full = { ...ok, archetype: 'pirate', seed: 4, style: { eyes: 'love', pattern: 'spots', accessory: 'crown' } }
   expect(cleanRoster([full])).toEqual([{ ...full, color: '#F07858' }])
 })
 
 test('buddies saved by 0.1 upgrade to a personality read from the name', async () => {
-  expect(cleanRoster([ok])).toEqual([{ ...ok, color: '#F07858', archetype: 'auto', seed: 0 }])
+  expect(cleanRoster([ok])).toEqual([{ ...ok, color: '#F07858', archetype: 'auto', seed: 0, style: DEFAULT_STYLE }])
 })
 
 test('bad personality fields fall back instead of dropping the buddy', async () => {
@@ -29,7 +31,7 @@ test('anything broken in the store is dropped, never drawn', async () => {
     null,
     'junk',
     42,
-    { ...ok, id: 'k', kind: 'dragon' },
+    { ...ok, id: 'k', kind: 'unicorn' },
     { ...ok, id: 'c', color: 'red' },
     { ...ok, id: 'c2', color: '#12345' },
     { ...ok, id: '' },
@@ -68,4 +70,23 @@ test('colours must be six-digit hex', async () => {
   expect(isColor('3CC48C')).toBe(false)
   expect(isColor('#3CC')).toBe(false)
   expect(isColor('url(x)')).toBe(false)
+})
+
+test('a style keeps its good parts and defaults the rest', async () => {
+  expect(cleanStyle(undefined)).toEqual(DEFAULT_STYLE)
+  expect(cleanStyle({ eyes: 'love', pattern: 'plaid', accessory: 'crown' })).toEqual({ eyes: 'love', pattern: 'plain', accessory: 'crown' })
+  expect(cleanStyle('crown')).toEqual(DEFAULT_STYLE)
+})
+
+test('stats are whole counts, and buddies made before 0.3 count', async () => {
+  const roster = cleanRoster([ok, { ...ok, id: 'b' }])
+  expect(cleanStats(undefined, roster)).toEqual({ ...EMPTY_STATS, buddiesMade: 2 })
+  const stats = cleanStats({ prompts: 12, wins: -3, pokes: 2.5, errors: '9', days: 4, lastDay: '2026-10-19', extra: 1 }, roster)
+  expect(stats).toEqual({ ...EMPTY_STATS, prompts: 12, days: 4, lastDay: '2026-10-19' })
+  expect(cleanStats({ lastDay: 'yesterday' }, []).lastDay).toBe('')
+})
+
+test('earned achievements are known ids, each once', async () => {
+  expect(cleanEarned(['champion', 'champion', 'made-up', 7, 'regular'])).toEqual(['champion', 'regular'])
+  expect(cleanEarned('champion')).toEqual([])
 })

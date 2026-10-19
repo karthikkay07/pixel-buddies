@@ -1,4 +1,14 @@
-export type BuddyKind = 'crab' | 'blob' | 'robot' | 'ghost'
+export type BuddyKind = 'crab' | 'blob' | 'robot' | 'ghost' | 'cat' | 'dragon' | 'cactus'
+
+export type EyeStyle = 'classic' | 'dots' | 'big' | 'sleepy' | 'angry' | 'love'
+export type Pattern = 'plain' | 'spots' | 'stripes' | 'belly' | 'gradient'
+export type Accessory = 'none' | 'crown' | 'party' | 'beanie' | 'bow' | 'flower' | 'headphones' | 'shades' | 'scarf'
+
+/** How a buddy is dressed: absent on buddies saved before 0.3, which get the defaults. */
+export type Style = { eyes: EyeStyle; pattern: Pattern; accessory: Accessory }
+
+/** Everything that decides how a buddy looks. */
+export type Look = { kind: BuddyKind; color: string; style: Style }
 
 export type Archetype =
   | 'cheerleader'
@@ -32,6 +42,7 @@ export type Buddy = {
   color: string
   archetype: Archetype | 'auto'
   seed: number
+  style: Style
 }
 
 export type Draft = {
@@ -40,6 +51,7 @@ export type Draft = {
   color: string
   archetype: Archetype | 'auto'
   seed: number
+  style: Style
   /** The animation the studio previews; not saved with the buddy. */
   preview: Anim
 }
@@ -57,6 +69,23 @@ export type Mood = {
   isThought: boolean
 }
 
+/** What a person has done with their buddy, counted for achievements. */
+export type Stats = {
+  prompts: number
+  toolCalls: number
+  wins: number
+  errors: number
+  longTurns: number
+  pokes: number
+  thoughts: number
+  sessions: number
+  buddiesMade: number
+  nightPrompts: number
+  days: number
+  /** The last day counted in `days`, as YYYY-MM-DD in local time. */
+  lastDay: string
+}
+
 declare module 'claude-code' {
   interface PluginState {
     'pixel-buddies': {
@@ -66,6 +95,9 @@ declare module 'claude-code' {
       isHidden: boolean
       mood: Mood
       isAsleep: boolean
+      stats: Stats
+      /** Achievement ids earned, in the order they were earned. */
+      earned: string[]
     }
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "pixel-buddies",
-  "version": "0.2.0",
-  "description": "Design an animated pixel-art buddy with its own personality. It lives above your prompt, reacts to your work and thinks out loud.",
+  "version": "0.3.0",
+  "description": "Design an animated pixel-art buddy with its own personality and earn new looks through achievements. It lives above your prompt, reacts to your work and thinks out loud.",
   "author": {
     "name": "karthikkay07",
     "url": "https://github.com/karthikkay07"

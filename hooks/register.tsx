@@ -1,9 +1,32 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { Anim, Buddy, Draft, Mood } from '../types'
+import type { Anim, Buddy, Draft, Mood, Stats, Style } from '../types'
+import {
+  ACHIEVEMENTS,
+  EMPTY_STATS,
+  bump,
+  isNight,
+  itemLabel,
+  itemsOf,
+  newlyEarned,
+  progress,
+  unlockedBy,
+  unlockedItems,
+} from './achievements'
+import type { Achievement, Item } from './achievements'
 import { ANIMS, ANIM_NAMES, TICK_MS, isAnim } from './animations'
-import { MAX_BUDDIES, MAX_NAME, cleanActiveId, cleanName, cleanRoster, isKind } from './data'
+import {
+  MAX_BUDDIES,
+  MAX_NAME,
+  cleanActiveId,
+  cleanEarned,
+  cleanName,
+  cleanRoster,
+  cleanStats,
+  isColor,
+  isKind,
+} from './data'
 import {
   ARCHETYPES,
   ARCHETYPE_NAMES,
@@ -18,6 +41,7 @@ import {
 } from './personality'
 import type { BuddyEvent, Chattiness } from './personality'
 import { CANVAS_H, CANVAS_W, COLORS, KINDS, NAMES, rasterCells, svgSource } from './sprites'
+import { ACCESSORIES, DEFAULT_STYLE, EYE_STYLES, PATTERNS, isAccessory, isEyeStyle, isPattern } from './style'
 
 const STUDIO = 'buddy-studio'
 const BRAIN_EVERY_MS = 10_000
@@ -27,6 +51,7 @@ const LINE_COOLDOWN_MS: Record<Chattiness, number> = { silent: Infinity, quiet: 
 const BIG_MOMENTS: readonly BuddyEvent[] = ['hello', 'error', 'success', 'done', 'poke']
 /** A turn this long counts as a big job when it finishes. */
 const LONG_TURN_MS = 45_000
+const PRESETS = COLORS.map(c => c.value)
 
 const REST: Mood = { anim: null, until: 0, since: 0, line: null, lineUntil: 0, isThought: false }
 
@@ -36,6 +61,7 @@ const draft = atom({ plugin: 'pixel-buddies', key: 'draft' } as const, {
   color: '#F07858',
   archetype: 'auto',
   seed: 0,
+  style: DEFAULT_STYLE,
   preview: 'idle',
 })
 const roster = atom({ plugin: 'pixel-buddies', key: 'roster' } as const, [])
@@ -43,6 +69,8 @@ const activeId = atom({ plugin: 'pixel-buddies', key: 'activeId' } as const, nul
 const isHidden = atom({ plugin: 'pixel-buddies', key: 'isHidden' } as const, false)
 const mood = atom({ plugin: 'pixel-buddies', key: 'mood' } as const, REST)
 const isAsleep = atom({ plugin: 'pixel-buddies', key: 'isAsleep' } as const, false)
+const stats = atom({ plugin: 'pixel-buddies', key: 'stats' } as const, EMPTY_STATS)
+const earned = atom({ plugin: 'pixel-buddies', key: 'earned' } as const, [])
 
 // Settings, from the plugin's options (/config).
 let level: Chattiness = 'normal'
@@ -58,6 +86,8 @@ let lastLineAt = -Infinity
 let lastErrorAt = -Infinity
 let turnStartedAt = 0
 let recentLines: string[] = []
+/** Stats changed since they were last written to the store. */
+let isStatsDirty = false
 
 function pick<T>(list: readonly T[]): T {
   return list[Math.floor(Math.random() * list.length)] ?? (list[0] as T)
@@ -78,6 +108,10 @@ function clockTime(now: number): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
+function lockLabel(item: Item, unlocked: ReadonlySet<Item>, label: string): string {
+  return unlocked.has(item) ? label : `🔒 ${label}`
+}
+
 async function activeBuddy($: EngineInterface): Promise<Buddy | null> {
   const id = await read($, activeId)
   const list = await read($, roster)
@@ -90,31 +124,43 @@ async function persist($: EngineInterface) {
   await $.store.set('isHidden', await read($, isHidden))
 }
 
-/** Plays a reaction to an event: an animation, and a line if the buddy feels like talking. */
-async function trigger($: EngineInterface, event: BuddyEvent, tool?: string) {
-  const buddy = await activeBuddy($)
-  if (!buddy || (await read($, isHidden))) return
+async function flushStats($: EngineInterface) {
+  if (!isStatsDirty) return
+  isStatsDirty = false
+  await $.store.set('stats', await read($, stats))
+  await $.store.set('earned', await read($, earned))
+}
+
+/** Shows an animation and a line now, cleared again when they have run. */
+async function show($: EngineInterface, anim: Anim | null, ms: number, line: string | null, isThought: boolean) {
   const now = await $.clock.now()
-  const personality = personalityOf(buddy)
-  const r = react(event, personality, level, { name: buddy.name, tool, time: clockTime(now) }, recentLines)
-  const isBig = BIG_MOMENTS.includes(event)
-  const line = r.line !== null && (isBig || now - lastLineAt >= LINE_COOLDOWN_MS[level]) ? r.line : null
-  if (!r.anim && line === null) return
   if (line !== null) {
     lastLineAt = now
     recentLines = [...recentLines, line].slice(-12)
   }
   await update($, mood, m => ({
-    anim: r.anim ?? m.anim,
-    until: r.anim ? now + r.ms : m.until,
-    since: r.anim ? tick : m.since,
+    anim: anim ?? m.anim,
+    until: anim ? now + ms : m.until,
+    since: anim ? tick : m.since,
     line: line ?? m.line,
     lineUntil: line !== null ? now + LINE_MS : m.lineUntil,
-    isThought: line !== null ? r.isThought : m.isThought,
+    isThought: line !== null ? isThought : m.isThought,
   }))
-  // Clear what has run its course, which redraws the band.
-  $.clock.after(r.ms + 50, () => void expire($))
+  $.clock.after(ms + 50, () => void expire($))
   if (line !== null) $.clock.after(LINE_MS + 50, () => void expire($))
+}
+
+/** Plays a reaction to an event: an animation, and a line if the buddy feels like talking. */
+async function trigger($: EngineInterface, event: BuddyEvent, tool?: string) {
+  const buddy = await activeBuddy($)
+  if (!buddy || (await read($, isHidden))) return
+  const now = await $.clock.now()
+  const r = react(event, personalityOf(buddy), level, { name: buddy.name, tool, time: clockTime(now) }, recentLines)
+  const isBig = BIG_MOMENTS.includes(event)
+  const line = r.line !== null && (isBig || now - lastLineAt >= LINE_COOLDOWN_MS[level]) ? r.line : null
+  if (!r.anim && line === null) return
+  if (line !== null && r.isThought) await count($, 'thoughts')
+  await show($, r.anim, r.ms, line, r.isThought)
 }
 
 async function expire($: EngineInterface) {
@@ -126,6 +172,31 @@ async function expire($: EngineInterface) {
   }))
 }
 
+/** Counts one of something toward the achievements, and awards any it completes. */
+async function count($: EngineInterface, stat: keyof Omit<Stats, 'lastDay'> | null) {
+  const now = await $.clock.now()
+  const next = await update($, stats, s => bump(s, stat, now))
+  isStatsDirty = true
+  const fresh = newlyEarned(next, await read($, earned))
+  if (fresh.length > 0) await award($, fresh)
+}
+
+async function award($: EngineInterface, list: readonly Achievement[]) {
+  await update($, earned, e => [...e, ...list.map(a => a.id)])
+  isStatsDirty = true
+  await flushStats($)
+  for (const a of list) {
+    const rewards = a.rewards.map(r => itemLabel(r, KINDS)).join(' and ')
+    $.ui.toast(`🏆 ${a.title}: ${rewards} unlocked! Try it in /buddy`, { timeoutMs: 8000 })
+  }
+  const last = list[list.length - 1]
+  if (last && (await activeBuddy($)) && !(await read($, isHidden))) {
+    const rewards = last.rewards.map(r => itemLabel(r, KINDS)).join(' and ')
+    // A silent buddy celebrates without a word; the toast says what was earned.
+    await show($, 'celebrate', 4000, level === 'silent' ? null : `We earned “${last.title}”! ${rewards} unlocked!`, false)
+  }
+}
+
 /** Anything the person or Claude does: it keeps the buddy awake, or wakes it. */
 async function activity($: EngineInterface) {
   lastActivity = await $.clock.now()
@@ -135,8 +206,9 @@ async function activity($: EngineInterface) {
   }
 }
 
-/** Every few seconds: doze off when idle long enough, or maybe think out loud. */
+/** Every few seconds: save stats, doze off when idle long enough, or maybe think out loud. */
 async function brain($: EngineInterface) {
+  await flushStats($)
   const buddy = await activeBuddy($)
   if (!buddy || isWorking || (await read($, isHidden)) || (await read($, isAsleep))) return
   const now = await $.clock.now()
@@ -161,22 +233,14 @@ async function paint($: EngineInterface) {
       const now = await $.clock.now()
       const anim = currentAnim(m, await read($, isAsleep), now)
       const frame = anim === m.anim ? tick - m.since : tick
-      const shown = await $.ui.blit({
-        requestId: bandSite,
-        key: 'band-sprite',
-        cells: rasterCells(buddy.kind, buddy.color, anim, frame),
-      })
+      const shown = await $.ui.blit({ requestId: bandSite, key: 'band-sprite', cells: rasterCells(buddy, anim, frame) })
       // Not mounted any more: stop painting until the band draws it again.
       if (shown.deny) bandSite = null
     }
   }
   if (isStudioOnTerminal) {
     const d = await read($, draft)
-    const shown = await $.ui.blit({
-      requestId: STUDIO,
-      key: 'preview',
-      cells: rasterCells(d.kind, d.color, d.preview, tick),
-    })
+    const shown = await $.ui.blit({ requestId: STUDIO, key: 'preview', cells: rasterCells(d, d.preview, tick) })
     if (shown.deny) isStudioOnTerminal = false
   }
 }
@@ -191,14 +255,18 @@ async function start($: EngineInterface) {
   const saved = cleanRoster(await $.store.get('roster'))
   const savedActive = cleanActiveId(await $.store.get('activeId'), saved)
   const savedHidden = (await $.store.get('isHidden')) === true
+  const savedStats = cleanStats(await $.store.get('stats'), saved)
+  const savedEarned = cleanEarned(await $.store.get('earned'))
   await update($, roster, () => saved)
   await update($, activeId, () => savedActive)
   await update($, isHidden, () => savedHidden)
+  await update($, stats, () => savedStats)
+  await update($, earned, () => savedEarned)
   lastActivity = await $.clock.now()
 
   await $.command.register({
     name: 'buddy',
-    description: 'Pixel Buddies: open the studio, or /buddy poke | hide | show',
+    description: 'Pixel Buddies: open the studio, or /buddy poke | achievements | hide | show',
   })
 
   $.clock.every(TICK_MS, () => void paint($))
@@ -208,14 +276,27 @@ async function start($: EngineInterface) {
 async function openStudio($: EngineInterface) {
   const current = await activeBuddy($)
   const next: Draft = current
-    ? { name: current.name, kind: current.kind, color: current.color, archetype: current.archetype, seed: current.seed, preview: 'idle' }
-    : { name: pick(NAMES), kind: pick(KINDS).value, color: pick(COLORS).value, archetype: 'auto', seed: 0, preview: 'idle' }
+    ? { ...current, preview: 'idle' }
+    : { name: pick(NAMES), kind: pick(KINDS.slice(0, 4)).value, color: pick(COLORS).value, archetype: 'auto', seed: 0, style: DEFAULT_STYLE, preview: 'idle' }
   await update($, draft, () => next)
   await $.ui.open({ id: STUDIO, title: 'Buddy studio', focus: true, closeOnEscape: true })
 }
 
 async function saveDraft($: EngineInterface, asNew: boolean) {
   const d = await read($, draft)
+  // Locked things can be tried on in the studio, not kept.
+  const unlocked = unlockedItems(await read($, earned))
+  const locked = itemsOf(d, PRESETS).filter(i => !unlocked.has(i))
+  const first = locked[0]
+  if (first) {
+    const by = unlockedBy(first)
+    const p = by ? progress(await read($, stats), by) : null
+    $.ui.toast(
+      `🔒 ${itemLabel(first, KINDS)} is locked. ${by ? `${by.goal} to unlock it (${p?.value ?? 0}/${by.target}).` : ''}`.trim(),
+      { timeoutMs: 8000 },
+    )
+    return
+  }
   const name = cleanName(d.name) || pick(NAMES)
   const current = await activeBuddy($)
   const isAdding = asNew || !current
@@ -224,7 +305,7 @@ async function saveDraft($: EngineInterface, asNew: boolean) {
     return
   }
   const id = !isAdding && current ? current.id : `b${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`
-  const buddy: Buddy = { id, name, kind: d.kind, color: d.color, archetype: d.archetype, seed: d.seed }
+  const buddy: Buddy = { id, name, kind: d.kind, color: d.color, archetype: d.archetype, seed: d.seed, style: d.style }
   await update($, roster, list =>
     list.some(b => b.id === id) ? list.map(b => (b.id === id ? buddy : b)) : [...list, buddy],
   )
@@ -234,11 +315,12 @@ async function saveDraft($: EngineInterface, asNew: boolean) {
   await persist($)
   $.ui.toast(`${name} the ${personalityOf(buddy).label.toLowerCase()} ${d.kind} is ready.`)
   await trigger($, 'hello')
+  if (isAdding) await count($, 'buddiesMade')
 }
 
 async function useBuddy($: EngineInterface, b: Buddy) {
   await update($, activeId, () => b.id)
-  await update($, draft, d => ({ ...d, name: b.name, kind: b.kind, color: b.color, archetype: b.archetype, seed: b.seed }))
+  await update($, draft, d => ({ ...d, ...b }))
   await update($, mood, () => REST)
   await persist($)
   await trigger($, 'hello')
@@ -255,6 +337,45 @@ async function deleteBuddy($: EngineInterface, b: Buddy) {
   await persist($)
 }
 
+async function setStyle($: EngineInterface, change: Partial<Style>) {
+  await update($, draft, d => ({ ...d, style: { ...d.style, ...change } }))
+}
+
+async function surprise($: EngineInterface) {
+  const unlocked = unlockedItems(await read($, earned))
+  const open = <T extends string>(group: string, list: readonly { value: T }[]) =>
+    list.filter(o => unlocked.has(`${group}:${o.value}` as Item)).map(o => o.value)
+  await update($, draft, x => ({
+    ...x,
+    name: pick(NAMES),
+    kind: pick(open('kind', KINDS)),
+    color: pick(COLORS).value,
+    archetype: 'auto' as const,
+    seed: Math.floor(Math.random() * 1000),
+    style: { eyes: pick(open('eyes', EYE_STYLES)), pattern: pick(open('pattern', PATTERNS)), accessory: pick(open('accessory', ACCESSORIES)) },
+  }))
+}
+
+async function setCustomColor($: EngineInterface, text: string) {
+  const hex = text.trim().startsWith('#') ? text.trim() : `#${text.trim()}`
+  if (!isColor(hex)) {
+    $.ui.toast('Use a colour like #FF8800.')
+    return
+  }
+  await update($, draft, d => ({ ...d, color: hex.toUpperCase() }))
+}
+
+async function achievementsText($: EngineInterface): Promise<string> {
+  const s = await read($, stats)
+  const e = await read($, earned)
+  const lines = ACHIEVEMENTS.map(a => {
+    const p = progress(s, a)
+    const rewards = a.rewards.map(r => itemLabel(r, KINDS)).join(', ')
+    return e.includes(a.id) ? `🏆 ${a.title}: ${rewards}` : `🔒 ${a.title} (${p.value}/${a.target}): ${a.goal}, unlocks ${rewards}`
+  })
+  return [`Achievements: ${e.length}/${ACHIEVEMENTS.length}`, ...lines].join('\n')
+}
+
 export const register: Register = (on, options) => {
   level = CHATTINESS.includes(options.chattiness as Chattiness) ? (options.chattiness as Chattiness) : 'normal'
   const minutes = Number(options.sleepAfterMinutes)
@@ -262,7 +383,17 @@ export const register: Register = (on, options) => {
 
   on('session.start', async ($, e, next) => {
     await start($)
+    await count($, 'sessions')
     await trigger($, 'hello')
+    return next(e)
+  })
+
+  on('session.end', async ($, e, next) => {
+    try {
+      await flushStats($)
+    } catch {
+      // Nothing to save it to; the next session counts on from what was saved.
+    }
     return next(e)
   })
 
@@ -278,7 +409,11 @@ export const register: Register = (on, options) => {
       if (!buddy) return { text: 'No buddy yet. /buddy makes one.' }
       await activity($)
       await trigger($, 'poke')
+      await count($, 'pokes')
       return { text: `You poked ${buddy.name}.` }
+    }
+    if (arg === 'achievements' || arg === 'stats') {
+      return { text: await achievementsText($) }
     }
     await openStudio($)
     return { text: 'Buddy studio opened.' }
@@ -286,9 +421,12 @@ export const register: Register = (on, options) => {
 
   on('prompt.submit', async ($, e, next) => {
     try {
-      turnStartedAt = await $.clock.now()
+      const now = await $.clock.now()
+      turnStartedAt = now
       await activity($)
       await trigger($, 'prompt')
+      await count($, 'prompts')
+      if (isNight(now)) await count($, 'nightPrompts')
     } catch {
       // A buddy never gets in the way of a prompt.
     }
@@ -299,6 +437,7 @@ export const register: Register = (on, options) => {
     try {
       await activity($)
       await trigger($, 'working', e.tool)
+      await count($, 'toolCalls')
     } catch {
       // Nor of a tool call.
     }
@@ -307,11 +446,15 @@ export const register: Register = (on, options) => {
       if (!('deny' in ran && ran.deny)) {
         const kind = classifyToolResult(e.tool, ran.isError === true, ran.text)
         const now = await $.clock.now()
-        // One sad face per bad patch, not one per failing command.
-        if (kind === 'error' && now - lastErrorAt > 20_000) {
-          lastErrorAt = now
-          await trigger($, 'error', e.tool)
+        if (kind === 'error') {
+          await count($, 'errors')
+          // One sad face per bad patch, not one per failing command.
+          if (now - lastErrorAt > 20_000) {
+            lastErrorAt = now
+            await trigger($, 'error', e.tool)
+          }
         } else if (kind === 'success') {
+          await count($, 'wins')
           await trigger($, 'success', e.tool)
         }
       }
@@ -324,7 +467,10 @@ export const register: Register = (on, options) => {
   on('turn.complete', async ($, e, next) => {
     try {
       const now = await $.clock.now()
-      if (e.reason === 'answer' && turnStartedAt > 0 && now - turnStartedAt >= LONG_TURN_MS) await trigger($, 'done')
+      if (e.reason === 'answer' && turnStartedAt > 0 && now - turnStartedAt >= LONG_TURN_MS) {
+        await trigger($, 'done')
+        await count($, 'longTurns')
+      }
       if (e.reason === 'error') await trigger($, 'error')
       lastActivity = now
     } catch {
@@ -371,7 +517,7 @@ export const register: Register = (on, options) => {
           key="band-sprite"
           columns={CANVAS_W}
           rows={CANVAS_H / 2}
-          cells={rasterCells(buddy.kind, buddy.color, anim, anim === m.anim ? tick - m.since : tick)}
+          cells={rasterCells(buddy, anim, anim === m.anim ? tick - m.since : tick)}
         />
       )
     } else {
@@ -379,10 +525,10 @@ export const register: Register = (on, options) => {
       const { Svg } = $.ui.resolve(e)
       sprite = (
         <Svg
-          source={svgSource(buddy.kind, buddy.color, anim)}
+          source={svgSource(buddy, anim)}
           alt={`${buddy.name} the ${buddy.kind}, ${ANIMS[anim].label.toLowerCase()}`}
           width={76}
-          height={64}
+          height={72}
           isInteractive
         />
       )
@@ -419,25 +565,32 @@ export const register: Register = (on, options) => {
     const d = await read($, draft)
     const list = await read($, roster)
     const current = await activeBuddy($)
+    const s = await read($, stats)
+    const got = await read($, earned)
+    const unlocked = unlockedItems(got)
+    const locked = itemsOf(d, PRESETS).filter(i => !unlocked.has(i))
     const personality = personalityOf({ name: cleanName(d.name) || 'Buddy', archetype: d.archetype, seed: d.seed })
     const greeting = ARCHETYPES[personality.archetype].lines.hello[0] ?? ''
+    const isCustom = !PRESETS.includes(d.color)
+    const colorOptions = [
+      ...COLORS,
+      ...(isCustom ? [{ value: d.color, label: lockLabel('color:custom', unlocked, `Custom ${d.color}`) }] : []),
+    ]
 
     let preview
     if (e.surface === 'terminal') {
       const { Raster } = $.ui.resolve(e)
       isStudioOnTerminal = true
-      preview = (
-        <Raster key="preview" columns={CANVAS_W} rows={CANVAS_H / 2} cells={rasterCells(d.kind, d.color, d.preview, tick)} />
-      )
+      preview = <Raster key="preview" columns={CANVAS_W} rows={CANVAS_H / 2} cells={rasterCells(d, d.preview, tick)} />
     } else {
       isStudioOnTerminal = false
       const { Svg } = $.ui.resolve(e)
       preview = (
         <Svg
-          source={svgSource(d.kind, d.color, d.preview)}
+          source={svgSource(d, d.preview)}
           alt={`Preview of ${d.name || 'your buddy'}, ${ANIMS[d.preview].label.toLowerCase()}`}
           width={152}
-          height={128}
+          height={144}
           isInteractive
         />
       )
@@ -464,24 +617,38 @@ export const register: Register = (on, options) => {
             <Text italic wrap="wrap">
               “{fill(greeting, { name: cleanName(d.name) || 'Buddy' })}”
             </Text>
+            {locked.length > 0 && (
+              <Text color="warning" wrap="wrap">
+                🔒 Trying on {locked.map(i => itemLabel(i, KINDS)).join(', ')}. Earn {locked.length === 1 ? 'it' : 'them'} to save.
+              </Text>
+            )}
           </Box>
         </Box>
 
         <Select
           key="kind"
           label="Type"
-          options={KINDS}
+          options={KINDS.map(k => ({ value: k.value, label: lockLabel(`kind:${k.value}`, unlocked, k.label) }))}
           value={d.kind}
           autoFocus
           onSelect={(v: string) => isKind(v) && update($, draft, x => ({ ...x, kind: v }))}
         />
-        <Select
-          key="color"
-          label="Colour"
-          options={COLORS}
-          value={d.color}
-          onSelect={(v: string) => update($, draft, x => ({ ...x, color: v }))}
-        />
+        <Box flexDirection="row" gap={2}>
+          <Select
+            key="color"
+            label="Colour"
+            options={colorOptions}
+            value={d.color}
+            onSelect={(v: string) => update($, draft, x => ({ ...x, color: v }))}
+          />
+          <Input
+            key="hex"
+            label={lockLabel('color:custom', unlocked, 'Custom')}
+            placeholder="#FF8800"
+            submitLabel="apply"
+            onSubmit={(v: string) => setCustomColor($, v)}
+          />
+        </Box>
         <Input
           key="name"
           label="Name"
@@ -497,13 +664,34 @@ export const register: Register = (on, options) => {
             label="Personality"
             options={[{ value: 'auto', label: 'Auto (from the name)' }, ...ARCHETYPE_NAMES.map(a => ({ value: a, label: ARCHETYPES[a].label }))]}
             value={d.archetype}
-            onSelect={(v: string) =>
-              update($, draft, x => ({ ...x, archetype: isArchetype(v) ? v : ('auto' as const) }))
-            }
+            onSelect={(v: string) => update($, draft, x => ({ ...x, archetype: isArchetype(v) ? v : ('auto' as const) }))}
           />
           {d.archetype === 'auto' && (
             <Button key="reroll" label="Reroll" hotkey="p" onPress={() => update($, draft, x => ({ ...x, seed: x.seed + 1 }))} />
           )}
+        </Box>
+        <Box flexDirection="row" gap={2} flexWrap="wrap">
+          <Select
+            key="eyes"
+            label="Eyes"
+            options={EYE_STYLES.map(o => ({ value: o.value, label: lockLabel(`eyes:${o.value}`, unlocked, o.label) }))}
+            value={d.style.eyes}
+            onSelect={(v: string) => isEyeStyle(v) && setStyle($, { eyes: v })}
+          />
+          <Select
+            key="pattern"
+            label="Pattern"
+            options={PATTERNS.map(o => ({ value: o.value, label: lockLabel(`pattern:${o.value}`, unlocked, o.label) }))}
+            value={d.style.pattern}
+            onSelect={(v: string) => isPattern(v) && setStyle($, { pattern: v })}
+          />
+          <Select
+            key="accessory"
+            label="Accessory"
+            options={ACCESSORIES.map(o => ({ value: o.value, label: lockLabel(`accessory:${o.value}`, unlocked, o.label) }))}
+            value={d.style.accessory}
+            onSelect={(v: string) => isAccessory(v) && setStyle($, { accessory: v })}
+          />
         </Box>
         <Select
           key="preview"
@@ -516,21 +704,7 @@ export const register: Register = (on, options) => {
         <Box flexDirection="row" gap={2}>
           <Button key="save" label={current ? 'Save changes' : 'Save buddy'} hotkey="s" onPress={() => saveDraft($, false)} />
           {current && <Button key="new" label="Save as new" hotkey="n" onPress={() => saveDraft($, true)} />}
-          <Button
-            key="random"
-            label="Surprise me"
-            hotkey="r"
-            onPress={() =>
-              update($, draft, x => ({
-                ...x,
-                name: pick(NAMES),
-                kind: pick(KINDS).value,
-                color: pick(COLORS).value,
-                archetype: 'auto' as const,
-                seed: Math.floor(Math.random() * 1000),
-              }))
-            }
-          />
+          <Button key="random" label="Surprise me" hotkey="r" onPress={() => surprise($)} />
         </Box>
 
         {list.length > 0 && (
@@ -551,6 +725,25 @@ export const register: Register = (on, options) => {
             ))}
           </Box>
         )}
+
+        <Box flexDirection="column">
+          <Text bold>
+            Achievements <Text dimColor>{got.length}/{ACHIEVEMENTS.length}</Text>
+          </Text>
+          {ACHIEVEMENTS.map(a => {
+            const p = progress(s, a)
+            const rewards = a.rewards.map(r => itemLabel(r, KINDS)).join(', ')
+            return got.includes(a.id) ? (
+              <Text key={`ach-${a.id}`}>
+                🏆 {a.title} <Text dimColor>· {rewards}</Text>
+              </Text>
+            ) : (
+              <Text key={`ach-${a.id}`} dimColor>
+                🔒 {a.title} {p.value}/{a.target} · {a.goal} → {rewards}
+              </Text>
+            )
+          })}
+        </Box>
       </Box>
     )
   })
