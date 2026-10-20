@@ -213,7 +213,7 @@ Every buddy lives its own adventure, and **acts it out right above your prompt**
 - **It visits what it has already built,** walking over to admire the tree, the rocket or the palm tree.
 - **It has the story's own moments:** catching a lost pixel, stargazing, hunting bugs, smelling the flowers, looking out to sea.
 - **When a chapter ends,** it runs over to the new piece the moment it appears and celebrates there.
-- **Under its name, the band always shows the story:** `🏴‍☠️ Ch. 2 Shade · ████░░░░░░ 1/2`.
+- **Under its name, the band always shows the story:** `🏴‍☠️ Ch. 2 Shade · ●○ 1/2`.
 
 **How a story plays:**
 - Every story has **8 chapters**. Each opens with a short beat of story (a toast, and in full in `/buddy story`) and a **quest from your real work**: send prompts, pass tests, survive errors, finish long jobs, come back on another day.

@@ -354,7 +354,7 @@ function fraction(n: number): string {
  * buddy stands then: a walk is two pictures, however far it goes.
  * `id` keeps the frames apart when several of these share a page.
  */
-export function svgSource(look: Look, clip: Clip, id = 'f', scene: SceneRef | null = null): string {
+export function svgSource(look: Look, clip: Clip, id = 'f', scene: SceneRef | null = null, framed = false): string {
   const frames = new Map<string, string>()
   const segments: { frame: string; dx: number; start: number; end: number }[] = []
   for (let t = 0; t < clip.length; t++) {
@@ -391,5 +391,12 @@ export function svgSource(look: Look, clip: Clip, id = 'f', scene: SceneRef | nu
   }
   // The scenery stays put while the buddy moves, so it is drawn once, behind.
   const backdrop = scene && scene.pieces > 0 ? paths(sceneGrid(scene, CANVAS_W, CANVAS_H)) : ''
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" shape-rendering="crispEdges"><defs>${defs}</defs>${backdrop}${body}</svg>`
+  // A framed stage: a faint panel and a ground line, so the buddy stands
+  // somewhere even before its story has built anything. Grey at low opacity
+  // reads on light and dark themes alike.
+  const stage = framed
+    ? `<rect width="${CANVAS_W}" height="${CANVAS_H}" rx="1.5" fill="#8a8a96" fill-opacity="0.1"/>` +
+      `<rect y="${CANVAS_H - 1}" width="${CANVAS_W}" height="1" fill="#8a8a96" fill-opacity="0.28"/>`
+    : ''
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" shape-rendering="crispEdges"><defs>${defs}</defs>${stage}${backdrop}${body}</svg>`
 }

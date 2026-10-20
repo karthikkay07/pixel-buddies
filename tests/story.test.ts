@@ -137,7 +137,9 @@ test('stored journeys are checked like everything else', async () => {
 
 test('story text fills in the buddy and what is left, and a bar shows progress', async () => {
   expect(fillStory('{name} needs {left} more', 'Mochi', 3)).toBe('Mochi needs 3 more')
-  expect(bar(3, 5)).toBe('██████░░░░ 3/5')
+  expect(bar(3, 5)).toBe('●●●○○ 3/5')
+  expect(bar(30, 60)).toBe('●●●●●○○○○○ 30/60')
+  expect(bar(0, 2)).toBe('○○ 0/2')
   expect(storyOf('repo').emoji).toBe('🏴‍☠️')
 })
 

@@ -502,8 +502,13 @@ export function fillStory(text: string, name: string, left = 0): string {
   return text.replaceAll('{name}', name).replaceAll('{left}', String(left))
 }
 
-/** A progress bar of ten blocks: `███████░░░ 7/10`. */
+/**
+ * A progress bar of dots, one per step (or ten for a long quest): `●●●○○ 3/5`.
+ * Dots draw the same in a terminal and in the desktop app's font, where block
+ * characters turn into grey boxes.
+ */
 export function bar(value: number, need: number): string {
-  const filled = need > 0 ? Math.round((value / need) * 10) : 0
-  return `${'█'.repeat(filled)}${'░'.repeat(10 - filled)} ${value}/${need}`
+  const slots = Math.min(Math.max(need, 1), 10)
+  const filled = need > 0 ? Math.round((value / need) * slots) : 0
+  return `${'●'.repeat(filled)}${'○'.repeat(slots - filled)} ${value}/${need}`
 }

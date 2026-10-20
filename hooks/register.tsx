@@ -1004,7 +1004,7 @@ export const register: Register = (on, options) => {
       const { Svg } = $.ui.resolve(e)
       sprite = (
         <Svg
-          source={svgSource(buddy, show.clip, 'f', scene)}
+          source={svgSource(buddy, show.clip, 'f', scene, true)}
           alt={`${buddy.name} the ${buddy.kind}, ${show.status.replace(/^is /, '')}`}
           width={240}
           height={108}
@@ -1093,7 +1093,7 @@ export const register: Register = (on, options) => {
       stage = <Raster key="story-stage" columns={CANVAS_W} rows={CANVAS_H / 2} cells={rasterCells(buddy, clipOf('idle'), 0, scene)} />
     } else {
       const { Svg } = $.ui.resolve(e)
-      stage = <Svg source={svgSource(buddy, clipOf('idle'), 's', scene)} alt={`${buddy.name} in ${def.title}`} width={320} height={144} isInteractive />
+      stage = <Svg source={svgSource(buddy, clipOf('idle'), 's', scene, true)} alt={`${buddy.name} in ${def.title}`} width={320} height={144} isInteractive />
     }
 
     return (
@@ -1164,7 +1164,7 @@ export const register: Register = (on, options) => {
       const { Svg } = $.ui.resolve(e)
       preview = (
         <Svg
-          source={svgSource(d, previewClip(d.preview, personality.archetype))}
+          source={svgSource(d, previewClip(d.preview, personality.archetype), 'f', null, true)}
           alt={`Preview of ${d.name || 'your buddy'}, ${previewClip(d.preview, personality.archetype).label.toLowerCase()}`}
           width={320}
           height={144}

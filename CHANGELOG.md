@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2 — 2026-10-20
+
+- **A visible stage:** in the desktop app, your buddy stands on a faint stage with a ground line, so its story's world has a clear place to appear and the buddy no longer floats in empty space.
+- **Progress shows as dots** (`●●●●○ 4/5`). The block characters drew as grey boxes in the desktop app's font.
+
 ## 0.5.1 — 2026-10-20
 
 Stories play out on the stage.

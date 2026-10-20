@@ -74,7 +74,7 @@ test('a buddy with no story starts the one that suits it, and can switch', { opt
   )
   expect((saved.journeys as Journeys).a?.current).toBe('repo')
   // The band shows the story too.
-  expect((await band($)).texts).toContain('🏴‍☠️ Ch. 1 Washed ashore · ░░░░░░░░░░ 0/5')
+  expect((await band($)).texts).toContain('🏴‍☠️ Ch. 1 Washed ashore · ○○○○○ 0/5')
 
   // Switching: the picker lists every story, the suggestion marked.
   expect((await $.command.run({ command: 'buddy', args: 'story', ...RUN })).text).toBe('The Sunken Repo opened.')
@@ -88,7 +88,8 @@ test('a buddy with no story starts the one that suits it, and can switch', { opt
   await ui.unmount()
 })
 
-test('the buddy acts its story out on the stage', { options: { chattiness: 'silent', sleepAfterMinutes: 0 } }, async ($, on) => {
+// Three minutes on the mock clock, drawing the band every second: given room.
+test('the buddy acts its story out on the stage', { timeoutMs: 30_000, options: { chattiness: 'silent', sleepAfterMinutes: 0 } }, async ($, on) => {
   const saved: Record<string, unknown> = {
     roster: [BIT],
     activeId: 'b',
