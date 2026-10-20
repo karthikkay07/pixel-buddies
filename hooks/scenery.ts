@@ -136,3 +136,29 @@ export function sceneGrid(scene: SceneRef | null, width: number, height: number)
   }
   return grid
 }
+
+/** Where a piece of a story's scene stands on the stage, or null for one that spans it (grass, a floor). */
+export function pieceBounds(story: StoryId, index: number): { x0: number; x1: number } | null {
+  const piece = SCENES[story][index]
+  if (!piece) return null
+  let x0 = Infinity
+  let x1 = -Infinity
+  for (const stamp of piece) {
+    const width = Math.max(...stamp.rows.map(r => r.length))
+    x0 = Math.min(x0, stamp.x)
+    x1 = Math.max(x1, stamp.x + width - 1)
+  }
+  return x1 - x0 > 24 ? null : { x0, x1 }
+}
+
+/**
+ * Where a buddy stands to work on (or look at) a piece, as its offset from the
+ * middle of the stage, and which way it faces: beside the piece, turned to it.
+ * `home` is the sprite's left edge at offset 0; `wander` how far it may go.
+ */
+export function standBeside(bounds: { x0: number; x1: number }, home: number, wander: number): { dx: number; face: 'left' | 'right' } {
+  const isLeft = (bounds.x0 + bounds.x1) / 2 < 20
+  const left = isLeft ? bounds.x1 + 1 : bounds.x0 - 12
+  const dx = Math.max(-wander, Math.min(wander, left - home))
+  return { dx, face: isLeft ? 'left' : 'right' }
+}

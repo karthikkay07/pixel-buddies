@@ -50,28 +50,80 @@ async function prompts($: Engine, n: number) {
   for (let i = 0; i < n; i++) await $.prompt.submit({ text: `task ${i}`, wait: false, origin: { kind: 'composer' } } as never)
 }
 
-test('a buddy with no story is asked to choose one, and the picker suggests what suits it', { options: { sleepAfterMinutes: 0 } }, async ($, on) => {
+const BAND = {
+  component: 'AbovePrompt',
+  props: { hasSurvey: false, isWorking: false, maxRows: 20, bodyColumns: 80, scroll: { offset: 0, bodyRows: 20 }, view: {} },
+} as const
+
+async function band($: Engine) {
+  const ui = await $.ui.mount({ plugin: 'pixel-buddies', surface: 'desktop', ...BAND })
+  const texts = (await ui.findAll({ type: 'Text' })).map(t => t.text).join(' | ')
+  const svg = await ui.find({ type: 'Svg' })
+  await ui.unmount()
+  return { texts, alt: String(svg?.props.alt ?? '') }
+}
+
+test('a buddy with no story starts the one that suits it, and can switch', { options: { sleepAfterMinutes: 0 } }, async ($, on) => {
   const saved: Record<string, unknown> = { roster: [BOLT], activeId: 'a' }
   const { toasts, clock } = world(on, SEPTEMBER, saved)
   await $.session.start({ cwd: '/work', surface: 'desktop', isInteractive: true })
   await clock.advance(7000)
-  expect(toasts).toContain('📖 Choose an adventure for Captain Bolt: /buddy story')
-  expect((await $.command.run({ command: 'buddy', args: 'story', ...RUN })).text).toBe('Choose an adventure for Captain Bolt.')
-
-  const ui = await $.ui.mount({ plugin: 'pixel-buddies', surface: 'desktop', ...STORY })
-  for (const id of ['pixels', 'voyager', 'king', 'garden', 'repo']) expect(await ui.find({ key: `pick-${id}` })).toBeDefined()
-  // A pirate is pointed at the pirate story.
-  expect(await ui.find({ type: 'Text', text: /Not started · ✨ suits Captain Bolt/ })).toBeDefined()
-  await ui.press({ key: 'pick-repo' })
+  // A pirate sets sail on the pirate story, in one toast.
+  expect(toasts).toContain(
+    '🏴‍☠️ Captain Bolt is starting The Sunken Repo! Chapter 1: Washed ashore. Quest: Send 5 prompts. Pick another story anytime: /buddy story',
+  )
   expect((saved.journeys as Journeys).a?.current).toBe('repo')
-  expect(toasts.some(t => t.startsWith('🏴‍☠️ The Sunken Repo, chapter 1: Washed ashore. Quest: Send 5 prompts'))).toBe(true)
-  // The pane now shows the story being played.
-  expect(await ui.find({ type: 'Text', text: /Chapter 1 of 8: Washed ashore/ })).toBeDefined()
-  await ui.unmount()
+  // The band shows the story too.
+  expect((await band($)).texts).toContain('🏴‍☠️ Ch. 1 Washed ashore · ░░░░░░░░░░ 0/5')
 
-  await prompts($, 5)
-  expect((saved.journeys as Journeys).a?.runs.repo?.chapter).toBe(1)
-  expect(toasts.some(t => t.startsWith('🏴‍☠️ The Sunken Repo, chapter 1 complete: Washed ashore. Beach rebuilt!'))).toBe(true)
+  // Switching: the picker lists every story, the suggestion marked.
+  expect((await $.command.run({ command: 'buddy', args: 'story', ...RUN })).text).toBe('The Sunken Repo opened.')
+  const ui = await $.ui.mount({ plugin: 'pixel-buddies', surface: 'desktop', ...STORY })
+  expect(await ui.find({ type: 'Text', text: /Chapter 1 of 8: Washed ashore/ })).toBeDefined()
+  await ui.press({ key: 'switch' })
+  for (const id of ['pixels', 'voyager', 'king', 'garden', 'repo']) expect(await ui.find({ key: `pick-${id}` })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /Chapter 1 of 8 · ✨ suits Captain Bolt/ })).toBeDefined()
+  await ui.press({ key: 'pick-garden' })
+  expect((saved.journeys as Journeys).a?.current).toBe('garden')
+  await ui.unmount()
+})
+
+test('the buddy acts its story out on the stage', { options: { chattiness: 'silent', sleepAfterMinutes: 0 } }, async ($, on) => {
+  const saved: Record<string, unknown> = {
+    roster: [BIT],
+    activeId: 'b',
+    journeys: { b: { current: 'voyager', runs: { voyager: { chapter: 3, banked: 0, from: null, isTold: true } } } },
+  }
+  const { clock } = world(on, SEPTEMBER, saved)
+  await $.session.start({ cwd: '/work', surface: 'desktop', isInteractive: true })
+  const seen = new Set<string>()
+  for (let s = 0; s < 180; s++) {
+    await clock.advance(1000)
+    seen.add((await band($)).alt.replace('Bit the robot, ', ''))
+  }
+  const all = [...seen].join(' | ')
+  // Working on the next piece (the nose cone), walking to it, visiting what was built, or stargazing.
+  // (This session is a new day, so the quest already reads 1 of 2.)
+  expect(all).toContain('working on the nose cone (1/2)')
+  expect(/off to work on the nose cone|admiring the|going to look at the|stargazing/.test(all)).toBe(true)
+})
+
+test('finishing a chapter: the buddy celebrates at the new piece', { options: { chattiness: 'silent', sleepAfterMinutes: 0 } }, async ($, on) => {
+  const saved: Record<string, unknown> = {
+    roster: [BOLT],
+    activeId: 'a',
+    journeys: { a: { current: 'repo', runs: { repo: { chapter: 1, banked: 1, from: null, isTold: true } } } },
+  }
+  const { toasts, clock } = world(on, SEPTEMBER, saved)
+  // Chapter 2 of The Sunken Repo: 2 more sessions for the palm tree; this one makes 2.
+  await $.session.start({ cwd: '/work', surface: 'desktop', isInteractive: true })
+  expect(toasts.some(t => t.startsWith('🏴‍☠️ The Sunken Repo, chapter 2 complete: Shade. Palm tree rebuilt!'))).toBe(true)
+  const seen = new Set<string>()
+  for (let s = 0; s < 8; s++) {
+    seen.add((await band($)).alt)
+    await clock.advance(1000)
+  }
+  expect(/running to see the new palm tree|celebrating the new palm tree/.test([...seen].join(' | '))).toBe(true)
 })
 
 test('each buddy keeps its own story, and only the active one counts', { options: { sleepAfterMinutes: 0 } }, async ($, on) => {

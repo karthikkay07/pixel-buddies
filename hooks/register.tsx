@@ -16,9 +16,10 @@ import {
   unlockedItems,
 } from './achievements'
 import type { Achievement, Item } from './achievements'
-import { ACTS, DOING, WORK_PROP, actById, pickNext, restMs, walkClip, walkTarget } from './acts'
+import { ACTS, DOING, STORY_WORK, WANDER, WORK_PROP, actById, pickNext, restMs, walkClip, walkTarget } from './acts'
 import { cardFileName, cardSvg } from './card'
 import { birthdayAge, dayOf, seasonOf } from './seasons'
+import { pieceBounds, standBeside } from './scenery'
 import type { SceneRef } from './scenery'
 import {
   STORIES,
@@ -63,7 +64,7 @@ import {
   thoughtChance,
 } from './personality'
 import type { BuddyEvent, Chattiness } from './personality'
-import { CANVAS_H, CANVAS_W, COLORS, KINDS, NAMES, rasterCells, svgSource } from './sprites'
+import { CANVAS_H, CANVAS_W, COLORS, HOME_X, KINDS, NAMES, rasterCells, svgSource } from './sprites'
 import { ACCESSORIES, DEFAULT_STYLE, EYE_STYLES, PATTERNS, isAccessory, isEyeStyle, isPattern } from './style'
 
 const STUDIO = 'buddy-studio'
@@ -139,6 +140,15 @@ function at(clip: Clip, x: number): Clip {
   } }
 }
 
+/** A clip turned to face left (toward a piece on that side). */
+function facing(clip: Clip, face: 'left' | 'right' | null | undefined): Clip {
+  if (face !== 'left') return clip
+  return { ...clip, key: `${clip.key}<`, pose: t => {
+    const p = clip.pose(t)
+    return { ...p, flip: !p.flip }
+  } }
+}
+
 /** Typing along while Claude works, with this personality's own prop. */
 function workClip(archetype: Archetype): Clip {
   const typing = clipOf('typing')
@@ -175,9 +185,9 @@ function showing(m: Mood, asleep: boolean, a: ActState | null, now: number, arch
   if (isWorking) return { clip: at(workClip(archetype), homeX), since: 0, status: STATUS.typing }
   if (asleep) return { clip: at(clipOf('sleeping'), homeX), since: 0, status: STATUS.sleeping }
   if (a && now < a.until) {
-    if (a.id === 'walk') return { clip: walkClip(a.from, a.to), since: a.since, status: DOING.walk ?? STATUS.idle }
+    if (a.id === 'walk') return { clip: walkClip(a.from, a.to), since: a.since, status: a.status ?? DOING.walk ?? STATUS.idle }
     const found = actById(a.id)
-    if (found) return { clip: at(found, homeX), since: a.since, status: DOING[found.id] ?? STATUS.idle }
+    if (found) return { clip: at(facing(found, a.face), homeX), since: a.since, status: a.status ?? DOING[found.id] ?? STATUS.idle }
   }
   return { clip: at(clipOf('idle'), homeX), since: 0, status: STATUS.idle }
 }
@@ -321,6 +331,27 @@ async function switchActive($: EngineInterface, id: string | null) {
   await saveJourneys($)
 }
 
+/** Starts the story that suits a buddy with none, and says so in one toast. */
+async function autoStart($: EngineInterface) {
+  const buddy = await activeBuddy($)
+  if (!buddy || (await activeRun($))) return
+  const p = personalityOf(buddy)
+  const id = suggestedStory(p.archetype)
+  const st = await read($, stats)
+  await update($, journeys, all => {
+    const j = switchStory(all[buddy.id] ?? { current: null, runs: {} }, id, st)
+    const run = j.runs[id]
+    return { ...all, [buddy.id]: run ? { ...j, runs: { ...j.runs, [id]: { ...run, isTold: true } } } : j }
+  })
+  await saveJourneys($)
+  const def = storyOf(id)
+  const first = def.chapters[0]
+  $.ui.toast(
+    `${def.emoji} ${buddy.name} is starting ${def.title}!${first ? ` Chapter 1: ${first.title}. Quest: ${first.quest.goal}.` : ''} Pick another story anytime: /buddy story`,
+    { timeoutMs: 10_000 },
+  )
+}
+
 /** Starts (or goes back to) a story for the active buddy. */
 async function pickStory($: EngineInterface, id: StoryId) {
   const buddy = await activeBuddy($)
@@ -345,7 +376,15 @@ async function advanceStory($: EngineInterface) {
   await saveJourneys($)
   const unlocked = await count($, 'chaptersDone', true)
   if (!(await read($, isHidden))) {
-    await show($, 'celebrate', 4500, level === 'silent' ? null : fillStory(chapter.ending, a.buddy.name), false)
+    // The ending is told while the buddy runs over to the new piece and celebrates there.
+    await show($, null, 0, level === 'silent' ? null : fillStory(chapter.ending, a.buddy.name), false)
+    const piece = chapter.piece?.toLowerCase()
+    await beginPlan($, {
+      act: 'cheer',
+      at: chapter.piece ? pieceBounds(a.id, piecesBuilt(a.id, next.chapter) - 1) : null,
+      status: piece ? `is celebrating the new ${piece}!` : 'is celebrating!',
+      walkStatus: piece ? `is running to see the new ${piece}!` : null,
+    })
   }
   if (isFinished(a.id, next)) {
     const trophy = await count($, def.finishStat, true)
@@ -439,6 +478,14 @@ async function startAct($: EngineInterface) {
   const p = personalityOf(buddy)
   const forced = forcedAct ? actById(forcedAct) : undefined
   forcedAct = null
+  // More often than not, a buddy with a story gets on with it.
+  if (!forced && Math.random() < 0.6) {
+    const plan = await storyPlan($, buddy)
+    if (plan) {
+      await beginPlan($, plan)
+      return
+    }
+  }
   const next = forced
     ? { kind: 'act' as const, act: forced }
     : pickNext(
@@ -468,11 +515,94 @@ async function startAct($: EngineInterface) {
 
 async function endAct($: EngineInterface, done: ActState) {
   const current = await read($, act)
-  if (current !== null && current.since === done.since && current.id === done.id) {
-    homeX = done.to
-    await update($, act, () => null)
+  // Something else took over meanwhile (a story moment): it schedules what follows.
+  if (current === null || current.since !== done.since || current.id !== done.id) return
+  homeX = done.to
+  // Arrived somewhere to do something: do it now, with no rest between.
+  const then = done.next ? actById(done.next.id) : undefined
+  if (done.next && then) {
+    const now = await $.clock.now()
+    const state: ActState = { id: then.id, since: tick, until: now + then.length * TICK_MS, from: homeX, to: homeX, status: done.next.status, face: done.next.face }
+    await update($, act, () => state)
+    $.clock.after(state.until - now + 20, () => void endAct($, state))
+    return
   }
+  await update($, act, () => null)
   await scheduleAct($)
+}
+
+type Plan = { act: string; at: { x0: number; x1: number } | null; status: string | null; walkStatus: string | null }
+
+/** Plays a story plan now: walks over first if the place is a few steps away, then does the act there. */
+async function beginPlan($: EngineInterface, plan: Plan) {
+  nextActTimer?.cancel()
+  const now = await $.clock.now()
+  const spot = plan.at ? standBeside(plan.at, HOME_X, WANDER) : null
+  const todo = actById(plan.act)
+  if (!todo) return
+  let state: ActState
+  if (spot && Math.abs(spot.dx - homeX) >= 2) {
+    const clip = walkClip(homeX, spot.dx)
+    state = {
+      id: 'walk',
+      since: tick,
+      until: now + clip.length * TICK_MS,
+      from: homeX,
+      to: spot.dx,
+      status: plan.walkStatus,
+      next: { id: todo.id, status: plan.status, face: spot.face },
+    }
+  } else {
+    state = { id: todo.id, since: tick, until: now + todo.length * TICK_MS, from: homeX, to: homeX, status: plan.status, face: spot?.face ?? null }
+  }
+  recentActs = [...recentActs, plan.act].slice(-4)
+  await update($, act, () => state)
+  $.clock.after(state.until - now + 20, () => void endAct($, state))
+}
+
+/**
+ * What a buddy with a story does next: mostly works on the chapter's next
+ * piece, where it will stand; sometimes admires a piece it built, or has one
+ * of the story's own moments.
+ */
+async function storyPlan($: EngineInterface, buddy: Buddy): Promise<Plan | null> {
+  const cur = currentRun((await read($, journeys))[buddy.id])
+  if (!cur) return null
+  const def = storyOf(cur.id)
+  const work = STORY_WORK[cur.id]
+  const chapter = def.chapters[cur.run.chapter]
+  const built = piecesBuilt(cur.id, cur.run.chapter)
+  const options: { w: number; plan: Plan }[] = []
+  if (chapter) {
+    const q = runProgress(cur.id, cur.run, await read($, stats))
+    const piece = chapter.piece?.toLowerCase()
+    options.push({
+      w: 5,
+      plan: {
+        act: work.work,
+        at: chapter.piece ? pieceBounds(cur.id, built) : null,
+        status: piece ? `is working on the ${piece} (${q.value}/${q.need})` : `is on the last chapter: ${chapter.title} (${q.value}/${q.need})`,
+        walkStatus: piece ? `is off to work on the ${piece}` : null,
+      },
+    })
+  }
+  const done = def.chapters.slice(0, cur.run.chapter).flatMap((c, i) => (c.piece ? [{ piece: c.piece, index: def.chapters.slice(0, i).filter(x => x.piece).length }] : []))
+  const visit = done[Math.floor(Math.random() * done.length)]
+  if (visit) {
+    const bounds = pieceBounds(cur.id, visit.index)
+    if (bounds) {
+      const name = visit.piece.toLowerCase()
+      options.push({ w: chapter ? 2 : 5, plan: { act: 'admire', at: bounds, status: `is admiring the ${name}`, walkStatus: `is going to look at the ${name}` } })
+    }
+  }
+  for (const moment of work.moments) options.push({ w: 2, plan: { act: moment, at: null, status: null, walkStatus: null } })
+  const total = options.reduce((n, o) => n + o.w, 0)
+  let r = Math.random() * total
+  for (const o of options) {
+    r -= o.w
+    if (r < 0) return o.plan
+  }
+  return options[0]?.plan ?? null
 }
 
 /** Anything the person or Claude does: it keeps the buddy awake, or wakes it. */
@@ -562,6 +692,7 @@ async function start($: EngineInterface) {
   $.clock.every(TICK_MS, () => void paint($))
   $.clock.every(BRAIN_EVERY_MS, () => void brain($))
   await scheduleAct($, 4000)
+  $.clock.after(3000, () => void autoStart($))
   $.clock.after(6000, () => void tellChapter($))
 }
 
@@ -608,7 +739,10 @@ async function saveDraft($: EngineInterface, asNew: boolean) {
   await persist($)
   $.ui.toast(`${name} the ${personalityOf(buddy).label.toLowerCase()} ${d.kind} is ready.`)
   await trigger($, 'hello')
-  if (isAdding) await count($, 'buddiesMade')
+  if (isAdding) {
+    await count($, 'buddiesMade')
+    await autoStart($)
+  }
 }
 
 async function useBuddy($: EngineInterface, b: Buddy) {
@@ -841,7 +975,16 @@ export const register: Register = (on, options) => {
     const now = await $.clock.now()
     const personality = personalityOf(buddy)
     const show = showing(m, await read($, isAsleep), await read($, act), now, personality.archetype)
-    const scene = sceneOf((await read($, journeys))[buddy.id])
+    const journey = (await read($, journeys))[buddy.id]
+    const scene = sceneOf(journey)
+    const playing = currentRun(journey)
+    let storyLine: string | null = null
+    if (playing) {
+      const def = storyOf(playing.id)
+      const chapter = def.chapters[playing.run.chapter]
+      const q = runProgress(playing.id, playing.run, await read($, stats))
+      storyLine = chapter ? `${def.emoji} Ch. ${playing.run.chapter + 1} ${chapter.title} · ${bar(q.value, q.need)}` : `${def.emoji} ${def.title} complete ✓`
+    }
     const line = m.line !== null && now < m.lineUntil ? m.line : null
 
     let sprite
@@ -863,8 +1006,8 @@ export const register: Register = (on, options) => {
         <Svg
           source={svgSource(buddy, show.clip, 'f', scene)}
           alt={`${buddy.name} the ${buddy.kind}, ${show.status.replace(/^is /, '')}`}
-          width={160}
-          height={72}
+          width={240}
+          height={108}
           isInteractive
         />
       )
@@ -887,6 +1030,7 @@ export const register: Register = (on, options) => {
           ) : (
             <Text dimColor>{show.status}</Text>
           )}
+          {storyLine !== null && <Text dimColor>{storyLine}</Text>}
         </Box>
       </Box>
     )

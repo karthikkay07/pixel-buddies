@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.5.1 — 2026-10-20
+
+Stories play out on the stage.
+
+- **Your buddy acts out its story above your prompt.** It walks to where the next piece of its world will go and works on it with the story's tool:
+  - a hammer in *The Lost Pixels*
+  - a wrench (with sparks) in *Star Voyager*
+  - a sword against the Bug King's minions
+  - a watering can in *Code Garden*
+  - a shovel in *The Sunken Repo*
+
+  It turns to face its work, and the band says what it's up to ("is working on the rowboat (3/5)").
+- It also walks over to admire pieces it has built, and has each story's own moments: catching a lost pixel, stargazing, hunting bugs, smelling the flowers, looking out to sea.
+- **When a chapter ends,** your buddy runs to the new piece as it appears and celebrates there, while the chapter's ending is told.
+- **The band always shows the story:** `🏴‍☠️ Ch. 2 Shade · ████░░░░░░ 1/2` under your buddy's name.
+- **A buddy without a story starts the one that suits it,** announced in one toast. Switch anytime in `/buddy story`.
+- A bigger stage on the desktop, so the world is easy to see.
+- 75 tests.
+
 ## 0.5.0 — 2026-10-20
 
 Stories to choose, seasons, and creatures that act like themselves.

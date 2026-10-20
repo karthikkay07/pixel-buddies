@@ -29,6 +29,13 @@ export type PropKind =
   | 'bat'
   | 'cake'
   | 'snow'
+  | 'hammer'
+  | 'wrench'
+  | 'sword'
+  | 'can'
+  | 'shovel'
+  | 'bug'
+  | 'pixel'
 
 /**
  * Where a prop sits, in sprite coordinates:
@@ -317,6 +324,64 @@ export const PROPS: Record<PropKind, PropDef> = {
     colors: { W: WHITE },
     frames: snowFrames(),
     path: [[-17, -4]],
+  },
+  // Tools a buddy works its story with, swung over two or three frames.
+  hammer: {
+    anchor: 'hand',
+    colors: { H: STEEL, S: STICK },
+    frames: [
+      ['HH.', 'HHS', '..S', '..S'],
+      ['...', 'HH.', 'HHS', '..S'],
+      ['...', '...', 'HHS', 'HHS'],
+    ],
+  },
+  wrench: {
+    anchor: 'hand',
+    colors: { W: STEEL, Y: YELLOW },
+    frames: [
+      ['W.W.', 'WWW.', '.W..', '.W..'],
+      ['W.WY', 'WWW.', '.W.Y', '.W..'],
+    ],
+  },
+  sword: {
+    anchor: 'hand',
+    colors: { B: 0xd8dbe6, G: 0xf5c542, S: STICK },
+    frames: [
+      ['...B', '..B.', '.B..', 'GG..', 'S...'],
+      ['....', '....', 'GBBB', 'S...', '....'],
+      ['....', '....', 'G...', 'SB..', '..B.'],
+    ],
+  },
+  can: {
+    anchor: 'hand',
+    colors: { C: 0x4fa3e0, W: 0x7fd3ff },
+    frames: [
+      ['....', 'CC..', 'CCCC', 'CC..'],
+      ['....', 'CC..', 'CCCC', 'CC.W', '...W'],
+    ],
+  },
+  shovel: {
+    anchor: 'hand',
+    colors: { S: STICK, M: STEEL, D: 0xe8c987 },
+    frames: [
+      ['S...', '.S..', '..S.', '..MM', '..MM'],
+      ['....', 'S...', '.S..', '.MM.', 'DMMD'],
+    ],
+  },
+  bug: {
+    anchor: 'free',
+    colors: { K: 0x2b2b33, R: RED, G: GREEN },
+    frames: [
+      ['G.G', 'KRK', 'KKK', 'K.K'],
+      ['.G.', 'KRK', 'KKK', '.K.'],
+    ],
+    path: [[11, 7], [12, 7], [11, 6], [12, 7], [13, 8], [14, 7]],
+  },
+  pixel: {
+    anchor: 'free',
+    colors: { P: 0x9ee6a0, W: WHITE, Y: YELLOW },
+    frames: [['.W.', 'WPW', '.W.'], ['.Y.', 'YPY', '.Y.']],
+    path: [[9, -3], [10, -4], [11, -3], [10, -2], [8, -1], [6, 0], [4, 1], [3, 2]],
   },
   fly: {
     anchor: 'free',

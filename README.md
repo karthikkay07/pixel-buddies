@@ -41,7 +41,7 @@
   - celebrates passing tests and successful builds
   - wobbles sadly at errors
   - stretches after a long job
-- **Five stories to choose from:** 🏠 *The Lost Pixels*, 🚀 *Star Voyager*, ⚔️ *The Bug King*, 🌱 *Code Garden* and 🏴‍☠️ *The Sunken Repo*. Each buddy plays **its own** adventure: 8 chapters of quests tied to your real work (passing tests, surviving errors, coming back tomorrow) that build its world **piece by piece, right on its stage**. Finish one for a trophy and a hat to match.
+- **Five stories, acted out on stage:** 🏠 *The Lost Pixels*, 🚀 *Star Voyager*, ⚔️ *The Bug King*, 🌱 *Code Garden* and 🏴‍☠️ *The Sunken Repo*. Each buddy plays **its own** adventure: 8 chapters of quests tied to your real work (passing tests, surviving errors, coming back tomorrow) that build its world **piece by piece, right on its stage**. Meanwhile your buddy walks over and **works on it**: hammering, welding, sword-fighting, watering, digging. Finish one for a trophy and a hat to match.
 - **A wardrobe to earn:** 7 types, 6 eye styles, 5 patterns, 15 accessories and any colour you like. Most of it unlocks **as you finish story chapters**, the rest through a short shelf of **11 milestone achievements**. You can try on anything locked to see what you're working toward.
 - **Random thoughts:** between tasks it thinks out loud ("💭 If a function is never called, does it truly exist?"), paced by its personality and your chattiness setting.
 - **A life of its own:** between moments your buddy wanders around, looks about, stretches, yawns, sits, lies down and chases flies. It also has habits of its own: the pirate looks through a telescope, the grump sips coffee, the nerd types on a tiny laptop, the poet writes poems. That's **34 acts** and walking, picked by personality, energy and time of day.
@@ -105,7 +105,7 @@ claude plugin uninstall pixel-buddies
 | Command | What it does |
 |---|---|
 | `/buddy` | Opens the **Buddy studio** panel |
-| `/buddy story` | Opens your buddy's story: the chapter, its quest and its world so far. With no story yet, opens the picker. |
+| `/buddy story` | Opens your buddy's story (the chapter, its quest and its world so far) and lets you switch to another |
 | `/buddy card` | Saves an animated SVG card of your buddy to your working folder, ready to share |
 | `/buddy poke` | Pokes your buddy. It always reacts. |
 | `/buddy achievements` | Your milestones and story rewards, with progress and what each unlocks |
@@ -196,7 +196,7 @@ Your buddy doesn't just bob in place. Every so often it does something of its ow
 
 ## Stories
 
-Every buddy can live its own adventure. Run `/buddy story` and **choose one**. Your buddy's personality suggests the one that suits it (✨), but it's your call.
+Every buddy lives its own adventure, and **acts it out right above your prompt**. A new buddy starts the story that suits its personality (a pirate sets sail on *The Sunken Repo*, a nerd starts building a rocket). Switch to any other story in `/buddy story`.
 
 <p align="center"><img src="assets/stories.png" alt="All five story worlds finished, each with a buddy: Pixelia's house and garden, a rocket on its launch pad under the stars, a torch-lit dungeon with a treasure chest and a sword in the stone, a blossoming garden with a fence, pond and beehive, and a beach with a palm tree, a rowboat and treasure" width="640"></p>
 
@@ -208,11 +208,20 @@ Every buddy can live its own adventure. Run `/buddy story` and **choose one**. Y
 | 🌱 **Code Garden** | A cosy one: grow a garden from a single seed, a little every day. | soil, sprout, flowers, fence, blossom tree, pond, beehive | sleepy, poet | 🏆 *Green fingers* · Flower crown |
 | 🏴‍☠️ **The Sunken Repo** | Washed ashore with a soggy map, your buddy hunts treasure lost at sea. | beach, palm tree, waves, rowboat, a bottle, X and shovel, treasure chest | pirate, gremlin | 🏆 *Treasure hunter* · Captain's hat |
 
+**Watch it play out on the stage.** Most of the time, your buddy gets on with its story:
+- **It walks to where the next piece of its world will go and works on it**, with that story's tool: hammering in Pixelia, welding the rocket, swinging a sword at the Bug King's minions, watering the garden, digging for treasure. The band says what it's doing: *"is working on the rowboat (3/5)"*.
+- **It visits what it has already built,** walking over to admire the tree, the rocket or the palm tree.
+- **It has the story's own moments:** catching a lost pixel, stargazing, hunting bugs, smelling the flowers, looking out to sea.
+- **When a chapter ends,** it runs over to the new piece the moment it appears and celebrates there.
+- **Under its name, the band always shows the story:** `🏴‍☠️ Ch. 2 Shade · ████░░░░░░ 1/2`.
+
 **How a story plays:**
 - Every story has **8 chapters**. Each opens with a short beat of story (a toast, and in full in `/buddy story`) and a **quest from your real work**: send prompts, pass tests, survive errors, finish long jobs, come back on another day.
 - Finish the quest and the chapter ends: your buddy celebrates, and **a piece of its world appears on its stage**, behind it everywhere it shows up (above the prompt, in the studio, on your card).
 - Your buddy sometimes thinks about the current quest ("💭 2 more green test runs and the pixels will light up…").
 - The last chapter is the finale: finish it for the story's 🏆 achievement and its hat. A finished world stays on your buddy's stage until you start another story.
+
+**Choosing and switching:** `/buddy story` shows the chapter, its quest and the world so far. **Choose another adventure** (`c`) lists all five stories, with ✨ on the one that suits your buddy.
 
 **Each buddy's own journey:**
 - Each buddy has its own story and its own progress, so your pirate crab can sail *The Sunken Repo* while your robot builds a rocket.
@@ -350,7 +359,7 @@ claude plugin validate .
 claude plugin test .
 ```
 
-`validate` checks the manifest, the marketplace file and the hooks module the way the engine will load them. `test` runs 73 tests in ten suites:
+`validate` checks the manifest, the marketplace file and the hooks module the way the engine will load them. `test` runs 75 tests in ten suites:
 
 | Suite | Covers |
 |---|---|

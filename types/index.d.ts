@@ -88,7 +88,19 @@ export type Mood = {
 }
 
 /** An act the buddy is in the middle of, or a walk (`id` is `walk`) from `from` to `to`. */
-export type ActState = { id: string; since: number; until: number; from: number; to: number }
+export type ActState = {
+  id: string
+  since: number
+  until: number
+  from: number
+  to: number
+  /** What the band says, when the act has more to say than its usual phrase ("is working on the rowboat (2/5)"). */
+  status?: string | null
+  /** Which way the buddy faces for it: toward the piece it is working on. */
+  face?: 'left' | 'right' | null
+  /** For a walk: the act to do on arriving. */
+  next?: { id: string; status: string | null; face: 'left' | 'right' | null } | null
+}
 
 /** What a person has done with their buddy, counted for achievements. */
 export type Stats = {

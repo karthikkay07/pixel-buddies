@@ -141,7 +141,7 @@ export const NAMES = ['Pixel', 'Bloop', 'Nibbles', 'Sprocket', 'Mochi', 'Zig', '
 export const CANVAS_W = 40
 export const CANVAS_H = 18
 /** Where the sprite's left edge stands when it has not wandered. */
-const HOME_X = 14
+export const HOME_X = 14
 const SPRITE_Y = 5
 /** Effects sit a little lower than the canvas top, beside the head. */
 const EFFECT_Y = 2

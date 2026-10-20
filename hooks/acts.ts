@@ -1,4 +1,4 @@
-import type { Archetype, BuddyKind } from '../types'
+import type { Archetype, BuddyKind, StoryId } from '../types'
 import { BASE_POSE } from './animations'
 import type { Clip, Pose } from './animations'
 import type { PropKind } from './props'
@@ -19,6 +19,8 @@ export type Act = Clip & {
   season?: Season
   /** Only on the buddy's birthday. */
   birthday?: true
+  /** Played only when a story asks for it, never picked at random. */
+  scripted?: true
   weight: number
   when?: { morning?: number; night?: number; afterError?: number }
 }
@@ -208,7 +210,45 @@ const SEASONAL: readonly Act[] = [
   act('cake', 'Birthday cake', 6, [[56, t => ({ prop: { kind: 'cake', frame: Math.floor(t / 3) % 2 }, eyes: 'happy', mouth: 'open', dy: t % 16 < 6 ? -1 : 0, effect: { kind: t % 32 < 16 ? 'heart' : 'sparkle', frame: Math.floor(t / 4) % 2 } })]], { birthday: true }),
 ]
 
-export const ACTS: readonly Act[] = [...UNIVERSAL, ...SIGNATURE, ...QUIRKS, ...SEASONAL]
+/**
+ * Story acts: a buddy working on its story's next piece with the story's tool,
+ * admiring what it has built, celebrating a new piece, and a few moments that
+ * belong to one story. The story planner picks these, with where to stand.
+ */
+const STORY: readonly Act[] = [
+  act('build', 'Build', 1, [[40, t => ({ prop: { kind: 'hammer', frame: Math.floor(t / 2) % 3 }, eyes: 'wide', mouth: 'flat', dy: t % 6 === 4 ? 1 : 0, effect: t % 6 === 4 ? { kind: 'bang', frame: 0 } : null })]], { scripted: true }),
+  act('weld', 'Weld', 1, [[40, t => ({ prop: { kind: 'wrench', frame: Math.floor(t / 2) % 2 }, eyes: 'wide', mouth: 'flat', effect: { kind: 'sparkle', frame: Math.floor(t / 2) % 2 } })]], { scripted: true }),
+  act('fight', 'Fight a bug', 1, [
+    [32, t => ({ prop: { kind: 'sword', frame: Math.floor(t / 2) % 3 }, eyes: 'wide', mouth: 'open', dx: t % 6 < 3 ? 1 : 0, effect: t % 12 === 6 ? { kind: 'bang', frame: 0 } : null })],
+    [10, { prop: { kind: 'sword', frame: 0 }, eyes: 'happy', mouth: 'open', effect: { kind: 'sparkle', frame: 0 } }],
+  ], { scripted: true }),
+  act('water', 'Water', 1, [[40, t => ({ prop: { kind: 'can', frame: Math.floor(t / 4) % 2 }, eyes: 'happy', mouth: 'smile', dy: Math.floor(t / 10) % 2 })]], { scripted: true }),
+  act('dig', 'Dig', 1, [[40, t => ({ prop: { kind: 'shovel', frame: Math.floor(t / 3) % 2 }, eyes: 'wide', mouth: 'flat', dy: Math.floor(t / 3) % 2, squash: t % 6 < 3 ? 0 : 1 })]], { scripted: true }),
+  act('admire', 'Admire', 1, [
+    [24, { eyes: 'open', mouth: 'smile', look: 'right' }],
+    [16, t => ({ eyes: 'happy', mouth: 'open', effect: { kind: 'heart', frame: Math.floor(t / 4) % 2 } })],
+  ], { scripted: true }),
+  act('cheer', 'Celebrate the new piece', 1, [[32, t => ({ dy: [0, -1, -2, -3, -3, -2, -1, 0][t % 8] ?? 0, eyes: 'happy', mouth: 'open', effect: { kind: 'sparkle', frame: Math.floor(t / 2) % 2 } })]], { scripted: true }),
+  act('catch', 'Catch a lost pixel', 1, [
+    [32, t => ({ prop: { kind: 'pixel', frame: Math.floor(t / 4) % 8 }, eyes: 'wide', look: Math.floor(t / 4) % 8 < 4 ? 'right' : 'left', dy: t > 24 ? -1 : 0 })],
+    [8, { eyes: 'happy', mouth: 'open', effect: { kind: 'sparkle', frame: 1 } }],
+  ], { scripted: true }),
+  act('stargaze', 'Stargaze', 1, [[48, t => ({ squash: 1, look: 'right', eyes: t % 24 > 20 ? 'closed' : 'open', mouth: 'smile', effect: t > 16 ? { kind: 'sparkle', frame: Math.floor(t / 8) % 2 } : null })]], { scripted: true }),
+  act('hunt', 'Hunt bugs', 1, [[40, t => ({ prop: { kind: 'bug', frame: Math.floor(t / 4) % 6 }, look: 'right', eyes: 'wide', mouth: 'flat', dx: Math.floor(t / 8) % 2 })]], { scripted: true }),
+  act('sniff', 'Smell the flowers', 1, [[40, t => ({ prop: { kind: 'rose', frame: 0 }, eyes: 'closed', mouth: 'smile', effect: t > 16 ? { kind: 'heart', frame: Math.floor(t / 6) % 2 } : null })]], { scripted: true }),
+  act('lookout', 'Look out to sea', 1, [[48, t => ({ prop: { kind: 'telescope', frame: t < 8 ? 0 : 1 }, look: 'right', eyes: 'open', mouth: t % 24 > 18 ? 'open' : 'flat' })]], { scripted: true }),
+]
+
+export const ACTS: readonly Act[] = [...UNIVERSAL, ...SIGNATURE, ...QUIRKS, ...SEASONAL, ...STORY]
+
+/** How each story's work is done, and the moments that belong to it. */
+export const STORY_WORK: Record<StoryId, { work: string; moments: readonly string[] }> = {
+  pixels: { work: 'build', moments: ['catch'] },
+  voyager: { work: 'weld', moments: ['stargaze'] },
+  king: { work: 'fight', moments: ['hunt'] },
+  garden: { work: 'water', moments: ['sniff'] },
+  repo: { work: 'dig', moments: ['lookout'] },
+}
 
 /** What the band says while an act plays: "Captain Bolt · is reading a treasure map". */
 export const DOING: Record<string, string> = {
@@ -265,6 +305,18 @@ export const DOING: Record<string, string> = {
   boo: 'says BOO!',
   snow: 'is catching snowflakes',
   cake: 'is having birthday cake!',
+  build: 'is building',
+  weld: 'is welding',
+  fight: 'is fighting a bug!',
+  water: 'is watering',
+  dig: 'is digging',
+  admire: 'is admiring its work',
+  cheer: 'is celebrating!',
+  catch: 'is catching a lost pixel',
+  stargaze: 'is stargazing',
+  hunt: 'is hunting bugs',
+  sniff: 'is smelling the flowers',
+  lookout: 'is looking out to sea',
   walk: 'is going for a stroll',
 }
 
@@ -317,6 +369,7 @@ export type Context = {
 
 /** Whether a buddy in this context can do an act at all. */
 function fits(a: Act, archetype: Archetype, ctx: Context): boolean {
+  if (a.scripted) return false
   if (a.who && !a.who.includes(archetype)) return false
   if (a.kinds && (!ctx.kind || !a.kinds.includes(ctx.kind))) return false
   if (a.season && a.season !== ctx.season) return false

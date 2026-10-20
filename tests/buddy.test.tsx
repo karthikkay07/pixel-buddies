@@ -97,6 +97,8 @@ test('make a buddy in the studio and see it above the prompt', async ($, on) => 
   expect(toasts).toEqual([
     'Sprocket-terminal the nerd robot is ready.',
     '🏆 Hello, friend: Dots eyes and Belly pattern unlocked! Try it in /buddy',
+    // A new buddy starts the story that suits it: a nerd builds a rocket.
+    '🚀 Sprocket-terminal is starting Star Voyager! Chapter 1: Crash landing. Quest: Send 5 prompts. Pick another story anytime: /buddy story',
     'Sprocket-desktop the nerd robot is ready.',
   ])
 })
