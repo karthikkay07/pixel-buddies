@@ -24,7 +24,7 @@ function world(on: On, saved: Record<string, unknown>, toasts: string[]) {
   })
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('session.start', ($, e) => ({ cwd: e.cwd }))
-  return mock.clock(on, { now: new Date(2026, 9, 19, 14, 0).getTime() })
+  return mock.clock(on, { now: new Date(2026, 8, 14, 12, 0).getTime() })
 }
 
 const PIRATE = { id: 'a', name: 'Captain Bolt', kind: 'crab', color: '#F07858', archetype: 'auto', seed: 0 }
@@ -46,7 +46,7 @@ test('locked things can be tried on but not saved', { options: { sleepAfterMinut
   expect(await studio.find({ type: 'Text', text: /Trying on Crown/ })).toBeDefined()
   await studio.press({ key: 'save' })
   expect(toasts.some(t => t.startsWith('🔒 Crown is locked. Pass tests or a build 25 times to unlock it (0/25).'))).toBe(true)
-  expect((saved.roster as Saved)[0]?.style).toBe(undefined)
+  expect((saved.roster as Saved)[0]?.style.accessory).toBe('none')
   await studio.unmount()
 })
 
@@ -72,7 +72,7 @@ test('earning an achievement unlocks its reward', { options: { sleepAfterMinutes
   expect((saved.roster as Saved)[0]?.style.eyes).toBe('love')
 
   const text = (await $.command.run({ command: 'buddy', args: 'achievements', ...RUN })).text ?? ''
-  expect(text.startsWith('Achievements: 2/17')).toBe(true)
+  expect(text.startsWith('Achievements: 2/19')).toBe(true)
   expect(text).toContain('🏆 Best friends: Love eyes')
   expect(text).toContain('🔒 Champion (0/25)')
 })
@@ -81,7 +81,7 @@ test('custom colours need the Artist achievement', { options: { sleepAfterMinute
   const saved: Record<string, unknown> = {
     roster: [PIRATE],
     activeId: 'a',
-    stats: { days: 5, lastDay: '2026-10-19', buddiesMade: 1 },
+    stats: { days: 5, lastDay: '2026-09-14', buddiesMade: 1 },
     earned: ['first-buddy', 'regular', 'artist'],
   }
   const toasts: string[] = []

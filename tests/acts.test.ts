@@ -24,7 +24,9 @@ test('every personality has three acts of its own, and everyone shares ten', asy
   // And the band can say what each one is doing.
   for (const a of ACTS) expect(typeof DOING[a.id]).toBe('string')
   expect(typeof DOING.walk).toBe('string')
-  expect(ACTS.filter(a => !a.who).length).toBe(10)
+  expect(ACTS.filter(a => !a.who && !a.kinds && !a.season && !a.birthday).length).toBe(10)
+  // Each type has two quirks of its own.
+  for (const { value } of KINDS) expect(ACTS.filter(a => a.kinds?.includes(value)).length).toBe(2)
   for (const archetype of ARCHETYPE_NAMES) {
     expect(ACTS.filter(a => a.who?.includes(archetype)).length).toBe(3)
   }

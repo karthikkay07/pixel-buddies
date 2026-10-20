@@ -16,6 +16,9 @@ import {
 } from './achievements'
 import type { Achievement, Item } from './achievements'
 import { ACTS, DOING, WORK_PROP, actById, pickNext, restMs, walkClip, walkTarget } from './acts'
+import { cardFileName, cardSvg } from './card'
+import { birthdayAge, dayOf, seasonOf } from './seasons'
+import { CHAPTERS, bar, fillStory, isFinished, piecesBuilt, questProgress } from './story'
 import { ANIMS, ANIM_NAMES, TICK_MS, clipOf, isAnim } from './animations'
 import type { Clip } from './animations'
 import { propFrames } from './props'
@@ -27,6 +30,7 @@ import {
   cleanName,
   cleanRoster,
   cleanStats,
+  cleanStory,
   isColor,
   isKind,
 } from './data'
@@ -47,6 +51,7 @@ import { CANVAS_H, CANVAS_W, COLORS, KINDS, NAMES, rasterCells, svgSource } from
 import { ACCESSORIES, DEFAULT_STYLE, EYE_STYLES, PATTERNS, isAccessory, isEyeStyle, isPattern } from './style'
 
 const STUDIO = 'buddy-studio'
+const STORY = 'buddy-story'
 const BRAIN_EVERY_MS = 10_000
 const LINE_MS = 7000
 /** Least time between two small remarks, by chattiness; big moments skip it. */
@@ -75,6 +80,7 @@ const isAsleep = atom({ plugin: 'pixel-buddies', key: 'isAsleep' } as const, fal
 const act = atom({ plugin: 'pixel-buddies', key: 'act' } as const, null)
 const stats = atom({ plugin: 'pixel-buddies', key: 'stats' } as const, EMPTY_STATS)
 const earned = atom({ plugin: 'pixel-buddies', key: 'earned' } as const, [])
+const story = atom({ plugin: 'pixel-buddies', key: 'story' } as const, { chapter: 0, start: EMPTY_STATS, isTold: false })
 
 // Settings, from the plugin's options (/config).
 let level: Chattiness = 'normal'
@@ -96,6 +102,8 @@ let isStatsDirty = false
 let homeX = 0
 let recentActs: string[] = []
 let nextActTimer: { cancel: () => void } | null = null
+/** An act to do next instead of picking one (a birthday cake). */
+let forcedAct: string | null = null
 
 function pick<T>(list: readonly T[]): T {
   return list[Math.floor(Math.random() * list.length)] ?? (list[0] as T)
@@ -210,6 +218,15 @@ async function trigger($: EngineInterface, event: BuddyEvent, tool?: string) {
   if (!buddy || (await read($, isHidden))) return
   const now = await $.clock.now()
   const r = react(event, personalityOf(buddy), level, { name: buddy.name, tool, time: clockTime(now) }, recentLines)
+  // Now and then a thought is about the story's quest instead.
+  if (event === 'thought' && r.line !== null && Math.random() < 0.3) {
+    const st = await read($, story)
+    const chapter = CHAPTERS[st.chapter]
+    if (chapter) {
+      const q = questProgress(st, await read($, stats))
+      r.line = fillStory(chapter.hint, buddy.name, q.need - q.value)
+    }
+  }
   const isBig = BIG_MOMENTS.includes(event)
   const line = r.line !== null && (isBig || now - lastLineAt >= LINE_COOLDOWN_MS[level]) ? r.line : null
   if (!r.anim && line === null) return
@@ -233,6 +250,55 @@ async function count($: EngineInterface, stat: keyof Omit<Stats, 'lastDay'> | nu
   isStatsDirty = true
   const fresh = newlyEarned(next, await read($, earned))
   if (fresh.length > 0) await award($, fresh)
+  await advanceStory($)
+}
+
+async function saveStory($: EngineInterface) {
+  await $.store.set('story', await read($, story))
+}
+
+/** Ends the chapter whose quest is done: home grows, the buddy celebrates, and the next chapter is told soon after. */
+async function advanceStory($: EngineInterface) {
+  const st = await read($, story)
+  const chapter = CHAPTERS[st.chapter]
+  if (!chapter || !questProgress(st, await read($, stats)).isDone) return
+  const now = await read($, stats)
+  await update($, story, () => ({ chapter: st.chapter + 1, start: now, isTold: false }))
+  await saveStory($)
+  const buddy = await activeBuddy($)
+  const name = buddy?.name ?? 'Your buddy'
+  $.ui.toast(
+    `📖 Chapter ${st.chapter + 1} complete: ${chapter.title}.${chapter.piece ? ` The ${chapter.piece.toLowerCase()} is back in Pixelia!` : ''} /buddy story`,
+    { timeoutMs: 9000 },
+  )
+  if (buddy && !(await read($, isHidden))) {
+    await show($, 'celebrate', 4500, level === 'silent' ? null : fillStory(chapter.ending, name), false)
+  }
+  $.clock.after(12_000, () => void tellChapter($))
+}
+
+/** Announces the chapter that has begun, once. */
+async function tellChapter($: EngineInterface) {
+  const st = await read($, story)
+  const chapter = CHAPTERS[st.chapter]
+  if (!chapter || st.isTold) return
+  await update($, story, s => ({ ...s, isTold: true }))
+  await saveStory($)
+  $.ui.toast(`📖 Chapter ${st.chapter + 1}: ${chapter.title}. Quest: ${chapter.quest.goal}. /buddy story`, { timeoutMs: 9000 })
+}
+
+/** A birthday, once on the day: a toast, a happy hop, and cake next. */
+async function celebrateBirthday($: EngineInterface) {
+  const buddy = await activeBuddy($)
+  if (!buddy) return
+  const now = await $.clock.now()
+  const age = birthdayAge(buddy.born, now)
+  const today = dayOf(now)
+  if (age === 0 || (await $.store.get('birthdayShown')) === `${buddy.id}:${today}`) return
+  await $.store.set('birthdayShown', `${buddy.id}:${today}`)
+  $.ui.toast(`🎂 It's ${buddy.name}'s birthday! ${age} year${age === 1 ? '' : 's'} together today.`, { timeoutMs: 9000 })
+  forcedAct = 'cake'
+  await show($, 'happy', 3000, level === 'silent' ? null : `It's my birthday! I'm ${age} today!`, false)
 }
 
 async function award($: EngineInterface, list: readonly Achievement[]) {
@@ -270,7 +336,22 @@ async function startAct($: EngineInterface) {
     return
   }
   const p = personalityOf(buddy)
-  const next = pickNext(p.archetype, p.energy, { hour: new Date(now).getHours(), sinceErrorMs: now - lastErrorAt }, recentActs)
+  const forced = forcedAct ? actById(forcedAct) : undefined
+  forcedAct = null
+  const next = forced
+    ? { kind: 'act' as const, act: forced }
+    : pickNext(
+        p.archetype,
+        p.energy,
+        {
+          hour: new Date(now).getHours(),
+          sinceErrorMs: now - lastErrorAt,
+          kind: buddy.kind,
+          season: seasonOf(now),
+          isBirthday: birthdayAge(buddy.born, now) > 0,
+        },
+        recentActs,
+      )
   let state: ActState
   if (next.kind === 'walk') {
     const to = walkTarget(homeX)
@@ -328,7 +409,8 @@ async function paint($: EngineInterface) {
       const m = await read($, mood)
       const now = await $.clock.now()
       const now2 = showing(m, await read($, isAsleep), await read($, act), now, personalityOf(buddy).archetype)
-      const shown = await $.ui.blit({ requestId: bandSite, key: 'band-sprite', cells: rasterCells(buddy, now2.clip, tick - now2.since) })
+      const scene = piecesBuilt((await read($, story)).chapter)
+      const shown = await $.ui.blit({ requestId: bandSite, key: 'band-sprite', cells: rasterCells(buddy, now2.clip, tick - now2.since, scene) })
       // Not mounted any more: stop painting until the band draws it again.
       if (shown.deny) bandSite = null
     }
@@ -348,7 +430,8 @@ async function start($: EngineInterface) {
   if (isStarted) return
   isStarted = true
   // Whatever the store holds is checked before anything draws it.
-  const saved = cleanRoster(await $.store.get('roster'))
+  const today = dayOf(await $.clock.now())
+  const saved = cleanRoster(await $.store.get('roster'), today)
   const savedActive = cleanActiveId(await $.store.get('activeId'), saved)
   const savedHidden = (await $.store.get('isHidden')) === true
   const savedStats = cleanStats(await $.store.get('stats'), saved)
@@ -358,22 +441,28 @@ async function start($: EngineInterface) {
   await update($, isHidden, () => savedHidden)
   await update($, stats, () => savedStats)
   await update($, earned, () => savedEarned)
+  const savedStory = cleanStory(await $.store.get('story'), savedStats, CHAPTERS.length)
+  await update($, story, () => savedStory)
+  // Buddies from before 0.5 now have a birthday; keep it.
+  await persist($)
+  await saveStory($)
   lastActivity = await $.clock.now()
 
   await $.command.register({
     name: 'buddy',
-    description: 'Pixel Buddies: open the studio, or /buddy poke | achievements | hide | show',
+    description: 'Pixel Buddies: open the studio, or /buddy story | card | poke | achievements | hide | show',
   })
 
   $.clock.every(TICK_MS, () => void paint($))
   $.clock.every(BRAIN_EVERY_MS, () => void brain($))
   await scheduleAct($, 4000)
+  if (!savedStory.isTold) $.clock.after(6000, () => void tellChapter($))
 }
 
 async function openStudio($: EngineInterface) {
   const current = await activeBuddy($)
   const next: Draft = current
-    ? { ...current, preview: 'idle' }
+    ? { name: current.name, kind: current.kind, color: current.color, archetype: current.archetype, seed: current.seed, style: current.style, preview: 'idle' }
     : { name: pick(NAMES), kind: pick(KINDS.slice(0, 4)).value, color: pick(COLORS).value, archetype: 'auto', seed: 0, style: DEFAULT_STYLE, preview: 'idle' }
   await update($, draft, () => next)
   await $.ui.open({ id: STUDIO, title: 'Buddy studio', focus: true, closeOnEscape: true })
@@ -402,7 +491,8 @@ async function saveDraft($: EngineInterface, asNew: boolean) {
     return
   }
   const id = !isAdding && current ? current.id : `b${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`
-  const buddy: Buddy = { id, name, kind: d.kind, color: d.color, archetype: d.archetype, seed: d.seed, style: d.style }
+  const born = !isAdding && current ? current.born : dayOf(await $.clock.now())
+  const buddy: Buddy = { id, name, kind: d.kind, color: d.color, archetype: d.archetype, seed: d.seed, style: d.style, born }
   await update($, roster, list =>
     list.some(b => b.id === id) ? list.map(b => (b.id === id ? buddy : b)) : [...list, buddy],
   )
@@ -417,7 +507,7 @@ async function saveDraft($: EngineInterface, asNew: boolean) {
 
 async function useBuddy($: EngineInterface, b: Buddy) {
   await update($, activeId, () => b.id)
-  await update($, draft, d => ({ ...d, ...b }))
+  await update($, draft, d => ({ ...d, name: b.name, kind: b.kind, color: b.color, archetype: b.archetype, seed: b.seed, style: b.style }))
   await update($, mood, () => REST)
   await persist($)
   await trigger($, 'hello')
@@ -482,6 +572,7 @@ export const register: Register = (on, options) => {
     await start($)
     await count($, 'sessions')
     await trigger($, 'hello')
+    await celebrateBirthday($)
     return next(e)
   })
 
@@ -511,6 +602,27 @@ export const register: Register = (on, options) => {
     }
     if (arg === 'achievements' || arg === 'stats') {
       return { text: await achievementsText($) }
+    }
+    if (arg === 'story') {
+      await $.ui.open({ id: STORY, title: 'The Lost Pixels', focus: true, closeOnEscape: true })
+      await tellChapter($)
+      return { text: 'Story opened.' }
+    }
+    if (arg === 'card') {
+      const buddy = await activeBuddy($)
+      if (!buddy) return { text: 'No buddy yet. /buddy makes one.' }
+      const file = cardFileName(buddy.name)
+      const svg = cardSvg(buddy, await read($, stats), await read($, earned), await read($, story), dayOf(await $.clock.now()))
+      try {
+        await $.fs.write(file, svg)
+      } catch (err) {
+        return { text: `Couldn't save the card: ${err instanceof Error ? err.message : String(err)}` }
+      }
+      // Where it landed, in full when the working folder can be read.
+      const cwd = await $.session.cwd().catch(() => '')
+      const sep = cwd.includes('\\') ? '\\' : '/'
+      const where = cwd ? `${cwd}${sep}${file}` : file
+      return { text: `Saved ${buddy.name}'s card to ${where}\nShow it off in a README with: ![${buddy.name}](${file})` }
     }
     await openStudio($)
     return { text: 'Buddy studio opened.' }
@@ -603,6 +715,7 @@ export const register: Register = (on, options) => {
     const now = await $.clock.now()
     const personality = personalityOf(buddy)
     const show = showing(m, await read($, isAsleep), await read($, act), now, personality.archetype)
+    const scene = piecesBuilt((await read($, story)).chapter)
     const line = m.line !== null && now < m.lineUntil ? m.line : null
 
     let sprite
@@ -614,7 +727,7 @@ export const register: Register = (on, options) => {
           key="band-sprite"
           columns={CANVAS_W}
           rows={CANVAS_H / 2}
-          cells={rasterCells(buddy, show.clip, tick - show.since)}
+          cells={rasterCells(buddy, show.clip, tick - show.since, scene)}
         />
       )
     } else {
@@ -622,7 +735,7 @@ export const register: Register = (on, options) => {
       const { Svg } = $.ui.resolve(e)
       sprite = (
         <Svg
-          source={svgSource(buddy, show.clip)}
+          source={svgSource(buddy, show.clip, 'f', scene)}
           alt={`${buddy.name} the ${buddy.kind}, ${show.status.replace(/^is /, '')}`}
           width={160}
           height={72}
@@ -649,6 +762,60 @@ export const register: Register = (on, options) => {
             <Text dimColor>{show.status}</Text>
           )}
         </Box>
+      </Box>
+    )
+  })
+
+  on('ui.render', { component: 'Pane', requestId: STORY }, async ($, e) => {
+    const { Box, Text } = $.ui.resolve(e)
+    const st = await read($, story)
+    const buddy = await activeBuddy($)
+    const name = buddy?.name ?? 'Your buddy'
+    const scene = piecesBuilt(st.chapter)
+    const chapter = CHAPTERS[st.chapter]
+    const q = questProgress(st, await read($, stats))
+    const built = CHAPTERS.slice(0, st.chapter).flatMap(c => (c.piece ? [c.piece] : []))
+
+    let stage = null
+    if (buddy && e.surface === 'terminal') {
+      const { Raster } = $.ui.resolve(e)
+      stage = <Raster key="story-stage" columns={CANVAS_W} rows={CANVAS_H / 2} cells={rasterCells(buddy, clipOf('idle'), 0, scene)} />
+    } else if (buddy && e.surface !== 'terminal') {
+      const { Svg } = $.ui.resolve(e)
+      stage = <Svg source={svgSource(buddy, clipOf('idle'), 's', scene)} alt={`${name} at home in Pixelia`} width={320} height={144} isInteractive />
+    }
+
+    return (
+      <Box flexDirection="column" gap={1}>
+        {stage}
+        <Text bold>📖 The Lost Pixels</Text>
+        {chapter ? (
+          <Box flexDirection="column">
+            <Text bold color={buddy?.color}>
+              Chapter {st.chapter + 1} of {CHAPTERS.length}: {chapter.title}
+            </Text>
+            <Text wrap="wrap">{fillStory(chapter.opening, name)}</Text>
+            <Text> </Text>
+            <Text>Quest: {chapter.quest.goal}</Text>
+            <Text color="success">{bar(q.value, q.need)}</Text>
+          </Box>
+        ) : (
+          <Text wrap="wrap">Pixelia is rebuilt, and {name} has gone looking for the light. To be continued…</Text>
+        )}
+        <Text dimColor>
+          Home so far: {built.length > 0 ? built.join(', ') : 'nothing yet: finish the first quest'}
+        </Text>
+        {st.chapter > 0 && (
+          <Box flexDirection="column">
+            <Text bold>So far</Text>
+            {CHAPTERS.slice(0, st.chapter).map((c, i) => (
+              <Text key={`ch-${i}`} dimColor wrap="wrap">
+                {i + 1}. {c.title}: {fillStory(c.ending, name)}
+              </Text>
+            ))}
+          </Box>
+        )}
+        {isFinished(st) && <Text dimColor>The story continues in the next update.</Text>}
       </Box>
     )
   })

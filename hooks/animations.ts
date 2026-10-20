@@ -20,6 +20,8 @@ export type Pose = {
   look?: 'left' | 'right'
   /** Something the buddy holds or plays with. */
   prop?: { kind: PropKind; frame: number } | null
+  /** See-through: 1 drops every other pixel, 2 keeps one in four (a ghost fading). */
+  fade?: number
 }
 
 /**

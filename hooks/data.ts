@@ -1,8 +1,10 @@
-import type { Buddy, BuddyKind, Stats, Style } from '../types'
+import type { Buddy, BuddyKind, Stats, Story, Style } from '../types'
 import { ACHIEVEMENTS, EMPTY_STATS } from './achievements'
 import { isArchetype } from './personality'
 import { KINDS } from './sprites'
 import { DEFAULT_STYLE, isAccessory, isEyeStyle, isPattern } from './style'
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/
 
 export const MAX_NAME = 24
 export const MAX_BUDDIES = 50
@@ -26,13 +28,13 @@ export function cleanName(value: unknown): string {
  * The roster as the store holds it, kept only where it is whole: anything
  * hand-edited, corrupted or written by a future version is dropped, never drawn.
  */
-export function cleanRoster(value: unknown): Buddy[] {
+export function cleanRoster(value: unknown, today = ''): Buddy[] {
   if (!Array.isArray(value)) return []
   const seen = new Set<string>()
   const out: Buddy[] = []
   for (const item of value) {
     if (typeof item !== 'object' || item === null) continue
-    const { id, name, kind, color, archetype, seed, style } = item as Record<string, unknown>
+    const { id, name, kind, color, archetype, seed, style, born } = item as Record<string, unknown>
     const clean = cleanName(name)
     if (typeof id !== 'string' || id === '' || seen.has(id)) continue
     if (!clean || !isKind(kind) || !isColor(color)) continue
@@ -46,6 +48,8 @@ export function cleanRoster(value: unknown): Buddy[] {
       archetype: isArchetype(archetype) ? archetype : 'auto',
       seed: cleanSeed(seed),
       style: cleanStyle(style),
+      // Buddies from before 0.5 have no birthday: they count from today.
+      born: typeof born === 'string' && DAY.test(born) ? born : today,
     })
     if (out.length === MAX_BUDDIES) break
   }
@@ -96,4 +100,16 @@ export function cleanEarned(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   const known = new Set(ACHIEVEMENTS.map(a => a.id))
   return [...new Set(value.filter((id): id is string => typeof id === 'string' && known.has(id)))]
+}
+
+/**
+ * The story as stored: a chapter within the story (or just past its end), the
+ * stats it began from, and whether it was told. With nothing stored, the story
+ * begins at the prologue from `stats` as they are now.
+ */
+export function cleanStory(value: unknown, stats: Stats, chapters: number): Story {
+  if (typeof value !== 'object' || value === null) return { chapter: 0, start: stats, isTold: false }
+  const v = value as Record<string, unknown>
+  const chapter = typeof v.chapter === 'number' && Number.isInteger(v.chapter) && v.chapter >= 0 ? Math.min(v.chapter, chapters) : 0
+  return { chapter, start: cleanStats(v.start, []), isTold: v.isTold === true }
 }

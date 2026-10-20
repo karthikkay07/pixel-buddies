@@ -1,4 +1,5 @@
 import type { Look, Stats } from '../types'
+import { seasonOf } from './seasons'
 import { ACCESSORIES, EYE_STYLES, PATTERNS } from './style'
 
 /**
@@ -47,6 +48,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'devoted', title: 'Devoted', goal: 'Use Claude Code on 7 different days', stat: 'days', target: 7, rewards: ['kind:dragon', 'pattern:gradient'] },
   { id: 'champion', title: 'Champion', goal: 'Pass tests or a build 25 times', stat: 'wins', target: 25, rewards: ['accessory:crown'] },
   { id: 'cool-customer', title: 'Cool customer', goal: 'Watch Claude run 500 tools', stat: 'toolCalls', target: 500, rewards: ['accessory:shades'] },
+  { id: 'spooky', title: 'Spooky season', goal: 'Use Claude Code during Halloween (15 Oct to 2 Nov)', stat: 'halloweenDays', target: 1, rewards: ['accessory:witch'] },
+  { id: 'frosty', title: 'Frosty', goal: 'Use Claude Code in winter (1 Dec to 6 Jan)', stat: 'winterDays', target: 1, rewards: ['accessory:santa'] },
 ]
 
 export const EMPTY_STATS: Stats = {
@@ -61,6 +64,8 @@ export const EMPTY_STATS: Stats = {
   buddiesMade: 0,
   nightPrompts: 0,
   days: 0,
+  halloweenDays: 0,
+  winterDays: 0,
   lastDay: '',
 }
 
@@ -122,6 +127,10 @@ export function bump(stats: Stats, stat: keyof Omit<Stats, 'lastDay'> | null, no
   if (today !== stats.lastDay) {
     next.days = stats.days + 1
     next.lastDay = today
+    // A new day in a season counts toward that season's achievement.
+    const season = seasonOf(now)
+    if (season === 'halloween') next.halloweenDays = stats.halloweenDays + 1
+    if (season === 'winter') next.winterDays = stats.winterDays + 1
   }
   return next
 }

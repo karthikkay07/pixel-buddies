@@ -67,7 +67,8 @@ test('make a buddy in the studio and see it above the prompt', async ($, on) => 
     toasts.push(e.text)
     return { value: undefined }
   })
-  mock.clock(on)
+  // A day outside every season, so no seasonal achievement joins in.
+  mock.clock(on, { now: new Date(2026, 8, 14, 12, 0).getTime() })
   for (const surface of ['terminal', 'desktop'] as const) {
     const band = await $.ui.mount({ plugin: 'pixel-buddies', surface, ...BAND })
     if (surface === 'terminal') {

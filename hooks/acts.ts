@@ -1,7 +1,8 @@
-import type { Archetype } from '../types'
+import type { Archetype, BuddyKind } from '../types'
 import { BASE_POSE } from './animations'
 import type { Clip, Pose } from './animations'
 import type { PropKind } from './props'
+import type { Season } from './seasons'
 
 /**
  * An act: a short thing a buddy does on its own while idle, like a pet would.
@@ -12,6 +13,12 @@ import type { PropKind } from './props'
 export type Act = Clip & {
   id: string
   who?: readonly Archetype[]
+  /** Only buddies of these types do it: how each animal behaves. */
+  kinds?: readonly BuddyKind[]
+  /** Only in this season. */
+  season?: Season
+  /** Only on the buddy's birthday. */
+  birthday?: true
   weight: number
   when?: { morning?: number; night?: number; afterError?: number }
 }
@@ -153,7 +160,55 @@ const SIGNATURE: readonly Act[] = [
   act('moon', 'Gaze at the moon', 3, [[56, t => ({ prop: prop('moon', 0), look: 'right', dx: [0, 0, 1, 1, 0, 0, -1, -1][Math.floor(t / 7) % 8] ?? 0, mouth: 'smile' })]], { who: ['poet'], when: { night: 4 } }),
 ]
 
-export const ACTS: readonly Act[] = [...UNIVERSAL, ...SIGNATURE]
+/** How each type of buddy behaves, like the animal (or cactus) it is. */
+const QUIRKS: readonly Act[] = [
+  // Cat
+  act('groom', 'Groom', 4, [[40, t => ({ squash: 1, eyes: 'happy', look: 'left', dy: t % 8 < 4 ? 0 : 1, effect: t > 28 ? { kind: 'sparkle', frame: t % 2 } : null })]], { kinds: ['cat'] }),
+  act('tail', 'Chase its tail', 3, [
+    [32, t => ({ flip: Math.floor(t / 2) % 2 === 1, dx: [0, 1, 2, 1, 0, -1, -2, -1][Math.floor(t / 2) % 8] ?? 0, eyes: 'wide', mouth: 'open' })],
+    [10, { eyes: 'closed', squash: 1, effect: { kind: 'question', frame: 0 } }],
+  ], { kinds: ['cat'] }),
+  // Dragon
+  act('smoke', 'Puff smoke', 4, [[40, t => ({ prop: { kind: 'smoke', frame: Math.floor(t / 4) % 3 }, eyes: 'closed', mouth: t % 16 < 8 ? 'open' : 'smile', look: 'right' })]], { kinds: ['dragon'] }),
+  act('flame', 'Breathe a tiny flame', 3, [
+    [12, { squash: -1, eyes: 'wide', mouth: 'flat' }],
+    [24, t => ({ prop: { kind: 'flame', frame: t % 3 }, eyes: 'happy', mouth: 'open' })],
+    [8, { eyes: 'happy', effect: { kind: 'sweat', frame: 0 } }],
+  ], { kinds: ['dragon'] }),
+  // Crab
+  act('scuttle', 'Scuttle sideways', 4, [[48, t => ({ dx: [0, 1, 2, 3, 4, 3, 2, 1, 0, -1, -2, -3, -4, -3, -2, -1][Math.floor(t / 3) % 16] ?? 0, dy: t % 2, eyes: 'wide' })]], { kinds: ['crab'] }),
+  act('clack', 'Clack its claws', 3, [[32, t => ({ squash: t % 4 < 2 ? -1 : 0, eyes: 'happy', mouth: 'open', effect: { kind: 'note', frame: Math.floor(t / 4) % 2 } })]], { kinds: ['crab'] }),
+  // Blob
+  act('jiggle', 'Jiggle', 4, [[32, t => ({ squash: [0, -1, 0, 1][t % 4] ?? 0, eyes: 'happy', mouth: t % 8 < 4 ? 'open' : 'smile' })]], { kinds: ['blob'] }),
+  act('split', 'Split in two', 3, [[48, t => ({ prop: { kind: 'mini', frame: Math.floor(t / 4) % 12 }, eyes: t < 24 ? 'wide' : 'happy', look: 'right', squash: t < 8 ? 1 : 0 })]], { kinds: ['blob'] }),
+  // Robot
+  act('glitch', 'Glitch', 3, [[32, t => ({ dx: ((t * 7) % 3) - 1, flip: t % 5 === 0, eyes: t % 3 === 0 ? 'closed' : 'wide', mouth: t % 2 === 0 ? 'flat' : 'open', fade: t % 4 === 1 ? 1 : 0 })]], { kinds: ['robot'] }),
+  act('charge', 'Recharge', 4, [
+    [56, t => ({ prop: { kind: 'battery', frame: Math.min(3, Math.floor(t / 14)) }, eyes: 'closed', mouth: 'smile', squash: 1 })],
+    [8, { eyes: 'wide', mouth: 'open', effect: { kind: 'sparkle', frame: 0 } }],
+  ], { kinds: ['robot'] }),
+  // Ghost
+  act('fade', 'Fade away', 3, [[48, t => ({ fade: t < 12 ? 1 : t < 36 ? 2 : 1, dy: -1, eyes: 'happy' })]], { kinds: ['ghost'] }),
+  act('float', 'Float in a loop', 4, [[56, t => ({ dy: [0, -1, -2, -3, -3, -2, -1, 0][Math.floor(t / 4) % 8] ?? 0, dx: [0, 1, 2, 1, 0, -1, -2, -1][Math.floor(t / 7) % 8] ?? 0, eyes: 'happy' })]], { kinds: ['ghost'] }),
+  // Cactus
+  act('bloom', 'Bloom', 3, [[48, t => ({ prop: { kind: 'bud', frame: Math.min(2, Math.floor(t / 12)) }, eyes: t > 24 ? 'happy' : 'open', effect: t > 36 ? { kind: 'sparkle', frame: t % 2 } : null })]], { kinds: ['cactus'] }),
+  act('sway', 'Sway in the breeze', 4, [[48, t => ({ dx: [0, 0, 1, 1, 0, 0, -1, -1][Math.floor(t / 6) % 8] ?? 0, eyes: 'closed', mouth: 'smile' })]], { kinds: ['cactus'] }),
+]
+
+/** Acts for a season, or a birthday. */
+const SEASONAL: readonly Act[] = [
+  act('pumpkin', 'Carve a pumpkin', 4, [[48, t => ({ prop: { kind: 'pumpkin', frame: Math.floor(t / 6) % 2 }, look: 'right', eyes: t < 16 ? 'wide' : 'happy', mouth: 'open' })]], { season: 'halloween' }),
+  act('bats', 'Watch the bats', 3, [[40, t => ({ prop: { kind: 'bat', frame: Math.floor(t / 4) % 10 }, look: Math.floor(t / 4) % 10 < 5 ? 'left' : 'right', eyes: 'wide', mouth: 'open' })]], { season: 'halloween' }),
+  act('boo', 'Say boo', 3, [
+    [8, { squash: 1, eyes: 'closed' }],
+    [16, t => ({ squash: -1, dy: -1, eyes: 'wide', mouth: 'open', fade: t % 4 < 2 ? 1 : 0, effect: { kind: 'bang', frame: 0 } })],
+    [8, { eyes: 'happy' }],
+  ], { season: 'halloween' }),
+  act('snow', 'Catch snowflakes', 4, [[56, t => ({ prop: { kind: 'snow', frame: Math.floor(t / 3) % 4 }, eyes: 'happy', mouth: 'open', dy: t % 16 < 4 ? -1 : 0 })]], { season: 'winter' }),
+  act('cake', 'Birthday cake', 6, [[56, t => ({ prop: { kind: 'cake', frame: Math.floor(t / 3) % 2 }, eyes: 'happy', mouth: 'open', dy: t % 16 < 6 ? -1 : 0, effect: { kind: t % 32 < 16 ? 'heart' : 'sparkle', frame: Math.floor(t / 4) % 2 } })]], { birthday: true }),
+]
+
+export const ACTS: readonly Act[] = [...UNIVERSAL, ...SIGNATURE, ...QUIRKS, ...SEASONAL]
 
 /** What the band says while an act plays: "Captain Bolt · is reading a treasure map". */
 export const DOING: Record<string, string> = {
@@ -191,6 +246,25 @@ export const DOING: Record<string, string> = {
   quill: 'is writing a poem',
   rose: 'is smelling a rose',
   moon: 'is gazing at the moon',
+  groom: 'is grooming',
+  tail: 'is chasing its tail',
+  smoke: 'is puffing smoke',
+  flame: 'breathed a tiny flame!',
+  scuttle: 'is scuttling sideways',
+  clack: 'is clacking its claws',
+  jiggle: 'is jiggling',
+  split: 'split in two!',
+  glitch: 'is glitching',
+  charge: 'is recharging',
+  fade: 'is fading away…',
+  float: 'is floating in loops',
+  bloom: 'is blooming',
+  sway: 'is swaying in the breeze',
+  pumpkin: 'is carving a pumpkin',
+  bats: 'is watching the bats',
+  boo: 'says BOO!',
+  snow: 'is catching snowflakes',
+  cake: 'is having birthday cake!',
   walk: 'is going for a stroll',
 }
 
@@ -232,7 +306,23 @@ export function walkClip(from: number, to: number): Clip {
   }
 }
 
-export type Context = { hour: number; sinceErrorMs: number }
+export type Context = {
+  hour: number
+  sinceErrorMs: number
+  /** The buddy's type, for its quirks; without it, no quirks. */
+  kind?: BuddyKind
+  season?: Season | null
+  isBirthday?: boolean
+}
+
+/** Whether a buddy in this context can do an act at all. */
+function fits(a: Act, archetype: Archetype, ctx: Context): boolean {
+  if (a.who && !a.who.includes(archetype)) return false
+  if (a.kinds && (!ctx.kind || !a.kinds.includes(ctx.kind))) return false
+  if (a.season && a.season !== ctx.season) return false
+  if (a.birthday && !ctx.isBirthday) return false
+  return true
+}
 
 function boost(a: Act, ctx: Context): number {
   const isMorning = ctx.hour >= 5 && ctx.hour < 11
@@ -257,9 +347,13 @@ export function pickNext(
   random: () => number = Math.random,
 ): { kind: 'act'; act: Act } | { kind: 'walk' } {
   if (!recent.includes('walk') && random() < 0.12 + energy * 0.04) return { kind: 'walk' }
-  const pool = ACTS.filter(a => (!a.who || a.who.includes(archetype)) && !recent.includes(a.id))
-  // A personality's own acts come up about as often as all the universal ones together.
-  const weighted = pool.map(a => ({ a, w: boost(a, ctx) * (a.who ? 2.5 : 1) }))
+  const pool = ACTS.filter(a => fits(a, archetype, ctx) && !recent.includes(a.id))
+  // A personality's own acts and its type's quirks come up about as often as
+  // all the universal ones together; a season's or a birthday's, more still.
+  const weighted = pool.map(a => ({
+    a,
+    w: boost(a, ctx) * (a.who || a.kinds ? 2.5 : 1) * (a.season ? 4 : 1) * (a.birthday ? 8 : 1),
+  }))
   const total = weighted.reduce((n, x) => n + x.w, 0)
   let r = random() * total
   for (const { a, w } of weighted) {

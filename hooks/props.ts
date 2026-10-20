@@ -20,14 +20,24 @@ export type PropKind =
   | 'rose'
   | 'moon'
   | 'fly'
+  | 'smoke'
+  | 'flame'
+  | 'battery'
+  | 'bud'
+  | 'mini'
+  | 'pumpkin'
+  | 'bat'
+  | 'cake'
+  | 'snow'
 
 /**
  * Where a prop sits, in sprite coordinates:
  * `hand` beside the body at mouth height, `front` held over the lower face,
  * `above` over the head, `perch` on the head, `ground` beside the feet, and
- * `free` at offsets of its own (a fly buzzing about).
+ * `free` at offsets of its own (a fly buzzing about), and `mouth` just in
+ * front of the mouth (smoke, a flame).
  */
-type Anchor = 'hand' | 'front' | 'above' | 'perch' | 'ground' | 'free'
+type Anchor = 'hand' | 'front' | 'above' | 'perch' | 'ground' | 'free' | 'mouth'
 
 type PropDef = {
   anchor: Anchor
@@ -65,6 +75,31 @@ const PILLOW = 0xdde6ff
 const MOON = 0xffe9a8
 const INK = 0x1e1e24
 const BULB = 0xfff3a0
+const SMOKE = 0xb4b9c6
+const BAT = 0x5a4a7a
+const PUMPKIN = 0xff8a1f
+const STEM = 0x3cc48c
+const ICING = 0xfff6f0
+const CAKE = 0xff8fc7
+
+/** Colours a prop takes from the buddy itself, for a prop that is a little piece of it. */
+export const BODY = -1
+export const BODY_LIGHT = -3
+
+/** Snow across the whole stage, falling one row a frame. */
+function snowFrames(): string[][] {
+  const flakes: [number, number][] = [
+    [0, 0], [5, 3], [9, 1], [14, 5], [18, 2], [23, 6], [27, 0], [31, 4], [3, 7], [12, 8], [21, 9], [29, 8], [7, 5], [25, 3],
+  ]
+  return [0, 1, 2, 3].map(f => {
+    const rows = Array.from({ length: 12 }, () => Array.from({ length: 34 }, () => '.'))
+    for (const [x, y] of flakes) {
+      const row = rows[(y + f * 3) % 12]
+      if (row) row[x] = 'W'
+    }
+    return rows.map(r => r.join(''))
+  })
+}
 
 export const PROPS: Record<PropKind, PropDef> = {
   pompom: {
@@ -212,6 +247,77 @@ export const PROPS: Record<PropKind, PropDef> = {
     frames: [['.MMM', 'MM..', 'MM..', '.MMM']],
     path: [[9, -4]],
   },
+  smoke: {
+    anchor: 'free',
+    colors: { s: SMOKE },
+    frames: [['.ss', 'ss.'], ['ss.', '.ss'], ['.s.', 's.s']],
+    path: [[6, 4], [7, 2], [8, 0]],
+  },
+  flame: {
+    anchor: 'mouth',
+    colors: { R: ORANGE, Y: YELLOW },
+    frames: [
+      ['RYY.', '.RY.'],
+      ['RRYYY', '.RYY.', '..R..'],
+      ['RYYY', 'RRYY', '.R..'],
+    ],
+  },
+  battery: {
+    anchor: 'above',
+    colors: { S: STEEL, R: RED, Y: YELLOW, G: GREEN },
+    frames: [
+      ['.SS.', 'S..S', 'S..S', 'SRRS', 'SSSS'],
+      ['.SS.', 'S..S', 'SYYS', 'SYYS', 'SSSS'],
+      ['.SS.', 'SGGS', 'SGGS', 'SGGS', 'SSSS'],
+      ['.SS.', 'SGGS', 'SGGS', 'SGGS', 'SSSS'],
+    ],
+  },
+  bud: {
+    anchor: 'perch',
+    colors: { G: GREEN, P: 0xff8fc7, Y: YELLOW },
+    frames: [
+      ['...', '...', '.G.', '.G.'],
+      ['...', '.P.', 'PGP', '.G.'],
+      ['P.P', '.Y.', 'P.P', '.G.'],
+    ],
+  },
+  mini: {
+    anchor: 'free',
+    colors: { B: BODY, L: BODY_LIGHT, K: INK },
+    frames: [['.LB.', 'BKKB', 'BBBB']],
+    path: [[3, 6], [5, 6], [7, 6], [9, 6], [10, 6], [11, 6], [11, 6], [11, 6], [10, 6], [9, 6], [7, 6], [5, 6]],
+  },
+  pumpkin: {
+    anchor: 'ground',
+    colors: { G: STEM, O: PUMPKIN, Y: YELLOW, y: 0xffb347 },
+    frames: [
+      ['..G..', '.OOO.', 'OYOYO', 'OOOOO', '.OOO.'],
+      ['..G..', '.OOO.', 'OyOyO', 'OOOOO', '.OOO.'],
+    ],
+  },
+  bat: {
+    anchor: 'free',
+    colors: { K: BAT, R: RED },
+    frames: [
+      ['K...K', 'KKRKK', '.KKK.'],
+      ['.....', 'KKRKK', 'K.K.K'],
+    ],
+    path: [[-8, -3], [-5, -4], [-2, -3], [1, -4], [4, -3], [7, -4], [10, -3], [13, -4], [16, -3], [19, -4]],
+  },
+  cake: {
+    anchor: 'front',
+    colors: { F: YELLOW, f: ORANGE, W: ICING, P: CAKE },
+    frames: [
+      ['..F..', '..W..', 'PPPPP', 'WWWWW', 'PPPPP'],
+      ['..f..', '..W..', 'PPPPP', 'WWWWW', 'PPPPP'],
+    ],
+  },
+  snow: {
+    anchor: 'free',
+    colors: { W: WHITE },
+    frames: snowFrames(),
+    path: [[-17, -4]],
+  },
   fly: {
     anchor: 'free',
     colors: { W: STEAM, K: INK },
@@ -243,8 +349,11 @@ export function propFrames(kind: PropKind): number {
   return Math.max(def.frames.length, def.path?.length ?? 1)
 }
 
-/** The pixels of a prop at a frame, in sprite coordinates. */
-export function propDabs(kind: PropKind, frame: number, a: Anchors): Dab[] {
+/**
+ * The pixels of a prop at a frame, in sprite coordinates. `palette` gives the
+ * buddy's own colours, for a prop drawn in them.
+ */
+export function propDabs(kind: PropKind, frame: number, a: Anchors, palette?: { body: number; light: number }): Dab[] {
   const def = PROPS[kind]
   const rows = def.frames[frame % def.frames.length] ?? []
   const h = rows.length
@@ -273,19 +382,26 @@ export function propDabs(kind: PropKind, frame: number, a: Anchors): Dab[] {
       x0 = a.headRight + 2
       y0 = 12 - h
       break
+    case 'mouth':
+      x0 = a.headRight + 1
+      y0 = a.mouthY - 1
+      break
     case 'free': {
       const path = def.path ?? [[0, 0]]
       const [px, py] = path[frame % path.length] ?? [0, 0]
       x0 = a.centerX + px
-      y0 = a.headTop + py
+      // Never below the feet, whatever the buddy's shape.
+      y0 = Math.min(a.headTop + py, 13 - h)
       break
     }
   }
   const out: Dab[] = []
   rows.forEach((row, dy) => {
     for (let dx = 0; dx < row.length; dx++) {
-      const color = def.colors[row[dx] ?? '.']
-      if (color !== undefined) out.push({ x: x0 + dx, y: y0 + dy, color })
+      const raw = def.colors[row[dx] ?? '.']
+      if (raw === undefined) continue
+      const color = raw === BODY ? (palette?.body ?? 0x888888) : raw === BODY_LIGHT ? (palette?.light ?? 0xcccccc) : raw
+      out.push({ x: x0 + dx, y: y0 + dy, color })
     }
   })
   return out

@@ -30,6 +30,8 @@ export const ACCESSORIES: readonly { value: Accessory; label: string }[] = [
   { value: 'headphones', label: 'Headphones' },
   { value: 'shades', label: 'Shades' },
   { value: 'scarf', label: 'Scarf' },
+  { value: 'witch', label: 'Witch hat' },
+  { value: 'santa', label: 'Santa hat' },
 ]
 
 export function isEyeStyle(value: unknown): value is EyeStyle {
@@ -149,6 +151,8 @@ const STEEL = 0x8a93a6
 const SHADES = 0x15151b
 const RED = 0xe8455a
 const DARK_RED = 0xb8323f
+const WITCH = 0x3b2a5c
+const FUR = 0xfff6f0
 
 /** The pixels an accessory adds to a sprite. */
 export function accessoryDabs(accessory: Accessory, a: Anchors): Dab[] {
@@ -198,6 +202,10 @@ export function accessoryDabs(accessory: Accessory, a: Anchors): Dab[] {
       for (let x = leftEnd + 1; x < rightStart; x++) dabs.push({ x, y: a.eyeTop, color: SHADES })
       return dabs
     }
+    case 'witch':
+      return stamp(['...KK..', '..KKK..', '..KKK..', '.KGGGK.', 'KKKKKKK'], cx - 3, a.headTop - 5, { K: WITCH, G: GOLD })
+    case 'santa':
+      return stamp(['.....W', '...RRR', '..RRRR', '.RRRRR.', 'FFFFFFF'], cx - 3, a.headTop - 5, { R: RED, W: FUR, F: FUR })
     case 'scarf': {
       const dabs: Dab[] = []
       const y = a.mouthY + 1

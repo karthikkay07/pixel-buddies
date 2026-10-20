@@ -3,6 +3,7 @@ import { TICK_MS, clipPose } from './animations'
 import type { Clip, EffectKind, Pose } from './animations'
 import { INK, WHITE, hexOf, palette } from './color'
 import { propDabs } from './props'
+import { sceneGrid } from './scenery'
 import { LOVE, accessoryDabs, anchorsOf, eyeDabs, patterned } from './style'
 
 // Each sprite is 12x12. Letters: B body, D shade, L highlight, E eye,
@@ -182,7 +183,7 @@ function effectGlyphs(kind: EffectKind, frame: number): Glyph[] {
  * prop) is drawn in sprite space first, so squashing and turning around
  * apply to all of it alike.
  */
-export function pixels(look: Look, pose: Pose): (number | null)[][] {
+export function pixels(look: Look, pose: Pose, scene = 0): (number | null)[][] {
   const { body, shade, light } = palette(look.color)
   const { eyes: eyeStyle, pattern, accessory } = look.style
   const rows = SPRITES[look.kind]
@@ -232,19 +233,21 @@ export function pixels(look: Look, pose: Pose): (number | null)[][] {
   for (const d of later) put(d.x, d.y, d.color)
   if (isOpen) for (const d of eyeDabs(style, a, INK)) put(d.x, d.y, d.color)
   for (const d of accessoryDabs(accessory, a)) put(d.x, d.y, d.color)
-  if (pose.prop) for (const d of propDabs(pose.prop.kind, pose.prop.frame, a)) put(d.x, d.y, d.color)
+  if (pose.prop) for (const d of propDabs(pose.prop.kind, pose.prop.frame, a, { body, light })) put(d.x, d.y, d.color)
 
   // Squash removes body rows just below the mouth (everything above drops
   // down); a stretch doubles that row (everything above rises).
   const squash = pose.squash ?? 0
   const cut = Math.min(a.mouthY + 1, 10)
   const flip = pose.flip === true
-  const grid: (number | null)[][] = Array.from({ length: CANVAS_H }, () =>
-    Array.from({ length: CANVAS_W }, () => null),
-  )
+  // Home, as far as the story has rebuilt it, behind everything else.
+  const grid = sceneGrid(scene, CANVAS_W, CANVAS_H)
+  const fade = pose.fade ?? 0
   const left = HOME_X + pose.dx
   const top = SPRITE_Y + pose.dy
   const paint = (x: number, y: number, color: number) => {
+    if (fade === 1 && (x + y) % 2 === 0) return
+    if (fade >= 2 && (x + y) % 4 !== 0) return
     const line = grid[top + y]
     const cx = left + (flip ? 11 - x : x)
     if (line && cx >= 0 && cx < CANVAS_W) line[cx] = color
@@ -283,8 +286,8 @@ const UPPER = 0x2580 // ▀
 const LOWER = 0x2584 // ▄
 
 /** Raster cells for one tick of a clip: two pixels per terminal cell. */
-export function rasterCells(look: Look, clip: Clip, tick: number): string {
-  const grid = pixels(look, clipPose(clip, tick))
+export function rasterCells(look: Look, clip: Clip, tick: number, scene = 0): string {
+  const grid = pixels(look, clipPose(clip, tick), scene)
   const rows = CANVAS_H / 2
   const words = new Uint32Array(CANVAS_W * rows * 3)
   for (let r = 0; r < rows; r++) {
@@ -350,7 +353,7 @@ function fraction(n: number): string {
  * buddy stands then: a walk is two pictures, however far it goes.
  * `id` keeps the frames apart when several of these share a page.
  */
-export function svgSource(look: Look, clip: Clip, id = 'f'): string {
+export function svgSource(look: Look, clip: Clip, id = 'f', scene = 0): string {
   const frames = new Map<string, string>()
   const segments: { frame: string; dx: number; start: number; end: number }[] = []
   for (let t = 0; t < clip.length; t++) {
@@ -385,5 +388,7 @@ export function svgSource(look: Look, clip: Clip, id = 'f'): string {
       `<animate attributeName="visibility" values="${values}" keyTimes="${times}" dur="${dur}" calcMode="discrete" repeatCount="indefinite"/>` +
       '</use>'
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" shape-rendering="crispEdges"><defs>${defs}</defs>${body}</svg>`
+  // The scenery stays put while the buddy moves, so it is drawn once, behind.
+  const backdrop = scene > 0 ? paths(sceneGrid(scene, CANVAS_W, CANVAS_H)) : ''
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${CANVAS_W} ${CANVAS_H}" shape-rendering="crispEdges"><defs>${defs}</defs>${backdrop}${body}</svg>`
 }

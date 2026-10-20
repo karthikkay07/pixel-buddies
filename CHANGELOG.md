@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.5.0 — 2026-10-20
+
+A story, seasons, and creatures that act like themselves.
+
+- **The Lost Pixels:** an 8-chapter story. Your buddy fell out of Pixelia, a shattered game world, and every chapter's quest (prompts, passing tests, errors survived, long jobs, days together) brings a piece of its home back **on its stage**: grass, a tree, walls, a roof, a door and window, a lamp, a flag. `/buddy story` shows the chapter, the quest's progress and what's been rebuilt. Chapters are announced in toasts, your buddy celebrates each ending, and its random thoughts hint at the current quest. Chapter 8 ends on a cliffhanger.
+- **Type quirks:** 14 new acts, two per type:
+  - cat: grooming, chasing its tail
+  - dragon: smoke, a tiny flame
+  - crab: scuttling, claw clacking
+  - blob: jiggling, splitting off a mini-me
+  - robot: glitching, recharging
+  - ghost: fading, floating in loops
+  - cactus: blooming, swaying
+- **Seasons:**
+  - Halloween (15 Oct to 2 Nov): pumpkin carving, bats and *boo*, plus the 🏆 *Spooky season* achievement and its 🧙 witch hat
+  - winter (1 Dec to 6 Jan): snowflakes, plus 🏆 *Frosty* and its 🎅 Santa hat
+- **Birthdays:** each buddy remembers the day it was made. Every year there's a toast, a hop and birthday cake. Buddies from earlier versions count from the day they first run 0.5.
+- **Share card:** `/buddy card` saves an animated SVG card (buddy, home, personality, days together, achievements, chapter) to share or embed in a README.
+- New pose: fading (see-through). Free-floating props stay on the stage, and props can use the buddy's own colours.
+- 19 achievements and 10 accessories. 68 tests across 10 suites (up from 54).
+
 ## 0.4.0 — 2026-10-19
 
 Buddies have a life of their own.

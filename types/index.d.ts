@@ -2,7 +2,7 @@ export type BuddyKind = 'crab' | 'blob' | 'robot' | 'ghost' | 'cat' | 'dragon' |
 
 export type EyeStyle = 'classic' | 'dots' | 'big' | 'sleepy' | 'angry' | 'love'
 export type Pattern = 'plain' | 'spots' | 'stripes' | 'belly' | 'gradient'
-export type Accessory = 'none' | 'crown' | 'party' | 'beanie' | 'bow' | 'flower' | 'headphones' | 'shades' | 'scarf'
+export type Accessory = 'none' | 'crown' | 'party' | 'beanie' | 'bow' | 'flower' | 'headphones' | 'shades' | 'scarf' | 'witch' | 'santa'
 
 /** How a buddy is dressed: absent on buddies saved before 0.3, which get the defaults. */
 export type Style = { eyes: EyeStyle; pattern: Pattern; accessory: Accessory }
@@ -43,6 +43,8 @@ export type Buddy = {
   archetype: Archetype | 'auto'
   seed: number
   style: Style
+  /** The day it was made, YYYY-MM-DD; its birthday comes round each year. Buddies from before 0.5 count from the day they were first seen. */
+  born: string
 }
 
 export type Draft = {
@@ -85,9 +87,19 @@ export type Stats = {
   buddiesMade: number
   nightPrompts: number
   days: number
+  /** Days active during Halloween and during winter, for the seasonal achievements. */
+  halloweenDays: number
+  winterDays: number
   /** The last day counted in `days`, as YYYY-MM-DD in local time. */
   lastDay: string
 }
+
+/**
+ * Where the story stands: the chapter being played (0 is the prologue), the
+ * stats when it began (its quest counts from there), and whether its opening
+ * has been told.
+ */
+export type Story = { chapter: number; start: Stats; isTold: boolean }
 
 declare module 'claude-code' {
   interface PluginState {
@@ -102,6 +114,7 @@ declare module 'claude-code' {
       stats: Stats
       /** Achievement ids earned, in the order they were earned. */
       earned: string[]
+      story: Story
     }
   }
 }

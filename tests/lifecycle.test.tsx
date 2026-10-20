@@ -47,7 +47,7 @@ test('restore, hide and show, switch, save as new, and delete', async ($, on) =>
     const { Box } = $.ui.resolve(e)
     return <Box />
   })
-  mock.clock(on)
+  mock.clock(on, { now: new Date(2026, 8, 14, 12, 0).getTime() })
 
   await $.session.start({ cwd: '/work', surface: 'desktop', isInteractive: true })
   expect(commands).toEqual(['buddy'])

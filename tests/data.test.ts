@@ -7,12 +7,12 @@ import { DEFAULT_STYLE } from '../hooks/style'
 const ok = { id: 'a', name: 'Alpha', kind: 'crab', color: '#f07858' }
 
 test('a whole roster survives, with colours normalised', async () => {
-  const full = { ...ok, archetype: 'pirate', seed: 4, style: { eyes: 'love', pattern: 'spots', accessory: 'crown' } }
+  const full = { ...ok, archetype: 'pirate', seed: 4, style: { eyes: 'love', pattern: 'spots', accessory: 'crown' }, born: '2026-10-19' }
   expect(cleanRoster([full])).toEqual([{ ...full, color: '#F07858' }])
 })
 
 test('buddies saved by 0.1 upgrade to a personality read from the name', async () => {
-  expect(cleanRoster([ok])).toEqual([{ ...ok, color: '#F07858', archetype: 'auto', seed: 0, style: DEFAULT_STYLE }])
+  expect(cleanRoster([ok], '2026-10-20')).toEqual([{ ...ok, color: '#F07858', archetype: 'auto', seed: 0, style: DEFAULT_STYLE, born: '2026-10-20' }])
 })
 
 test('bad personality fields fall back instead of dropping the buddy', async () => {
