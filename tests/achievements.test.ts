@@ -2,7 +2,10 @@ import { expect, test } from 'claude-code/testing'
 
 import {
   ACHIEVEMENTS,
+  CHAPTER_REWARDS,
   EMPTY_STATS,
+  LEGACY_REWARDS,
+  MILESTONES,
   FREE,
   bump,
   dayOf,
@@ -44,27 +47,39 @@ test('achievement ids are unique and every goal is reachable', async () => {
   }
 })
 
+test('a short shelf of milestones, and the wardrobe as story rewards', async () => {
+  expect(MILESTONES.length).toBe(11)
+  // Story rewards come in order, each a step further on.
+  const targets = CHAPTER_REWARDS.map(a => a.target)
+  expect(targets.every((t, i) => i === 0 || t > (targets[i - 1] ?? 0))).toBe(true)
+  expect(CHAPTER_REWARDS.every(a => a.stat === 'chaptersDone')).toBe(true)
+})
+
 test('progress counts up to the target and no further', async () => {
-  const champion = ACHIEVEMENTS.find(a => a.id === 'champion')!
-  expect(progress({ ...EMPTY_STATS, wins: 7 }, champion)).toEqual({ value: 7, isDone: false })
-  expect(progress({ ...EMPTY_STATS, wins: 99 }, champion)).toEqual({ value: 25, isDone: true })
+  const week = ACHIEVEMENTS.find(a => a.id === 'week')!
+  expect(progress({ ...EMPTY_STATS, days: 3 }, week)).toEqual({ value: 3, isDone: false })
+  expect(progress({ ...EMPTY_STATS, days: 99 }, week)).toEqual({ value: 7, isDone: true })
 })
 
 test('only new achievements are earned, in list order', async () => {
-  const stats = { ...EMPTY_STATS, wins: 30, pokes: 10 }
-  expect(newlyEarned(stats, []).map(a => a.id)).toEqual(['green-light', 'best-friends', 'champion'])
-  expect(newlyEarned(stats, ['green-light', 'champion']).map(a => a.id)).toEqual(['best-friends'])
+  const stats = { ...EMPTY_STATS, nightPrompts: 10, chaptersDone: 3 }
+  expect(newlyEarned(stats, []).map(a => a.id)).toEqual(['night-owl', 'chapters-1', 'chapters-2', 'chapters-3'])
+  expect(newlyEarned(stats, ['night-owl', 'chapters-1']).map(a => a.id)).toEqual(['chapters-2', 'chapters-3'])
   expect(newlyEarned(EMPTY_STATS, [])).toEqual([])
 })
 
-test('earning unlocks the rewards', async () => {
-  const items = unlockedItems(['champion', 'regular'])
+test('earning unlocks the rewards, and what older versions unlocked stays unlocked', async () => {
+  const items = unlockedItems(['chapters-18', 'week'])
   expect(items.has('accessory:crown')).toBe(true)
-  expect(items.has('kind:cat')).toBe(true)
+  expect(items.has('accessory:scarf')).toBe(true)
   expect(items.has('kind:crab')).toBe(true)
   expect(items.has('kind:dragon')).toBe(false)
-  expect(unlockedBy('accessory:crown')?.id).toBe('champion')
+  expect(unlockedBy('accessory:crown')?.id).toBe('chapters-18')
   expect(unlockedBy('kind:crab')).toBe(undefined)
+  // Achievements from before 0.5 are no longer awarded, but keep their rewards.
+  const old = unlockedItems(['best-friends', 'devoted'])
+  expect(old.has('eyes:love') && old.has('kind:dragon') && old.has('pattern:gradient')).toBe(true)
+  for (const id of Object.keys(LEGACY_REWARDS)) expect(ACHIEVEMENTS.some(a => a.id === id)).toBe(false)
 })
 
 test('a look lists what it uses, custom colours included', async () => {

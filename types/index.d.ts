@@ -112,6 +112,8 @@ export type Stats = {
   storyKing: number
   storyGarden: number
   storyRepo: number
+  /** Story chapters finished, across every story and buddy: they unlock the wardrobe. */
+  chaptersDone: number
   /** The last day counted in `days`, as YYYY-MM-DD in local time. */
   lastDay: string
 }

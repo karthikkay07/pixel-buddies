@@ -45,24 +45,30 @@ test('locked things can be tried on but not saved', { options: { sleepAfterMinut
   await studio.select({ key: 'accessory', value: 'crown' })
   expect(await studio.find({ type: 'Text', text: /Trying on Crown/ })).toBeDefined()
   await studio.press({ key: 'save' })
-  expect(toasts.some(t => t.startsWith('🔒 Crown is locked. Pass tests or a build 25 times to unlock it (0/25).'))).toBe(true)
+  expect(toasts.some(t => t.startsWith('🔒 Crown is locked. Finish 18 story chapters to unlock it (0/18).'))).toBe(true)
   expect((saved.roster as Saved)[0]?.style.accessory).toBe('none')
   await studio.unmount()
 })
 
-test('earning an achievement unlocks its reward', { options: { sleepAfterMinutes: 0 } }, async ($, on) => {
-  const saved: Record<string, unknown> = { roster: [PIRATE], activeId: 'a' }
+test('finishing story chapters unlocks the wardrobe, in one toast with the chapter', { options: { sleepAfterMinutes: 0 } }, async ($, on) => {
+  // Nine chapters done, and one prompt short of the tenth.
+  const saved: Record<string, unknown> = {
+    roster: [PIRATE],
+    activeId: 'a',
+    stats: { buddiesMade: 1, chaptersDone: 9, days: 1, lastDay: '2026-09-14' },
+    earned: ['first-buddy', 'chapters-1', 'chapters-2', 'chapters-3', 'chapters-4', 'chapters-6', 'chapters-8'],
+    journeys: { a: { current: 'pixels', runs: { pixels: { chapter: 0, banked: 4, from: null, isTold: true } } } },
+  }
   const toasts: string[] = []
-  const clock = world(on, saved, toasts)
+  world(on, saved, toasts)
+  on('prompt.submit', ($, e) => ({ text: e.text }))
   await $.session.start({ cwd: '/work', surface: 'desktop', isInteractive: true })
-  // Made before stats existed: the buddy counts, so the first achievement is earned at once.
-  expect(saved.earned).toEqual(['first-buddy'])
 
-  for (let i = 0; i < 10; i++) await $.command.run({ command: 'buddy', args: 'poke', ...RUN })
-  await clock.advance(10_000)
-  expect(saved.earned).toEqual(['first-buddy', 'best-friends'])
-  expect(toasts).toContain('🏆 Best friends: Love eyes unlocked! Try it in /buddy')
-  expect((saved.stats as { pokes: number }).pokes).toBe(10)
+  await $.prompt.submit({ text: 'one more', wait: false, origin: { kind: 'composer' } } as never)
+  expect(saved.earned).toContain('chapters-10')
+  expect(toasts.filter(t => t.includes('Love eyes'))).toEqual([
+    '🏠 The Lost Pixels, chapter 1 complete: A pixel falls. Grass rebuilt! 🎁 Love eyes unlocked! /buddy story',
+  ])
 
   await $.command.run({ command: 'buddy', args: '', ...RUN })
   const studio = await $.ui.mount({ plugin: 'pixel-buddies', surface: 'desktop', ...STUDIO })
@@ -72,12 +78,14 @@ test('earning an achievement unlocks its reward', { options: { sleepAfterMinutes
   expect((saved.roster as Saved)[0]?.style.eyes).toBe('love')
 
   const text = (await $.command.run({ command: 'buddy', args: 'achievements', ...RUN })).text ?? ''
-  expect(text.startsWith('Achievements: 2/24')).toBe(true)
-  expect(text).toContain('🏆 Best friends: Love eyes')
-  expect(text).toContain('🔒 Champion (0/25)')
+  expect(text.startsWith('Achievements: 1/11')).toBe(true)
+  expect(text).toContain('🔒 A week together (1/7)')
+  expect(text).toContain('Story rewards (10 chapters finished):')
+  expect(text).toContain('🎁 10 chapters: Love eyes')
+  expect(text).toContain('🔒 12 chapters: Dragon')
 })
 
-test('custom colours need the Artist achievement', { options: { sleepAfterMinutes: 0 } }, async ($, on) => {
+test('custom colours unlocked by an achievement from before 0.5 stay unlocked', { options: { sleepAfterMinutes: 0 } }, async ($, on) => {
   const saved: Record<string, unknown> = {
     roster: [PIRATE],
     activeId: 'a',

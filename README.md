@@ -42,7 +42,7 @@
   - wobbles sadly at errors
   - stretches after a long job
 - **Five stories to choose from:** 🏠 *The Lost Pixels*, 🚀 *Star Voyager*, ⚔️ *The Bug King*, 🌱 *Code Garden* and 🏴‍☠️ *The Sunken Repo*. Each buddy plays **its own** adventure: 8 chapters of quests tied to your real work (passing tests, surviving errors, coming back tomorrow) that build its world **piece by piece, right on its stage**. Finish one for a trophy and a hat to match.
-- **A wardrobe to earn:** 7 types, 6 eye styles, 5 patterns, 15 accessories (2 seasonal, 5 from stories) and any colour you like. **24 achievements** from real use unlock them, and you can try on anything locked to see what you're working toward.
+- **A wardrobe to earn:** 7 types, 6 eye styles, 5 patterns, 15 accessories and any colour you like. Most of it unlocks **as you finish story chapters**, the rest through a short shelf of **11 milestone achievements**. You can try on anything locked to see what you're working toward.
 - **Random thoughts:** between tasks it thinks out loud ("💭 If a function is never called, does it truly exist?"), paced by its personality and your chattiness setting.
 - **A life of its own:** between moments your buddy wanders around, looks about, stretches, yawns, sits, lies down and chases flies. It also has habits of its own: the pirate looks through a telescope, the grump sips coffee, the nerd types on a tiny laptop, the poet writes poems. That's **34 acts** and walking, picked by personality, energy and time of day.
 - **Behaves like the creature it is:** cats groom and chase their tails, dragons puff smoke, crabs scuttle sideways, blobs split in two, robots glitch and recharge, ghosts fade away, cacti bloom.
@@ -108,7 +108,7 @@ claude plugin uninstall pixel-buddies
 | `/buddy story` | Opens your buddy's story: the chapter, its quest and its world so far. With no story yet, opens the picker. |
 | `/buddy card` | Saves an animated SVG card of your buddy to your working folder, ready to share |
 | `/buddy poke` | Pokes your buddy. It always reacts. |
-| `/buddy achievements` | Lists every achievement with your progress and what it unlocks |
+| `/buddy achievements` | Your milestones and story rewards, with progress and what each unlocks |
 | `/buddy hide` | Hides your buddy (it's remembered) |
 | `/buddy show` | Brings it back |
 
@@ -129,7 +129,7 @@ claude plugin uninstall pixel-buddies
 | **Surprise me** | `r` | Random type, colour, name, personality and style, from what you've unlocked |
 | **Use / Delete** | — | Manage your roster at the bottom of the panel |
 
-The studio shows the personality as you type the name: its archetype, energy, chattiness, traits and a sample line. **Locked items can be tried on:** pick one and the preview wears it, but saving tells you what to do to unlock it. Your achievements and progress are listed at the bottom. You can keep up to 50 buddies. Press **Esc** to close the studio.
+The studio shows the personality as you type the name: its archetype, energy, chattiness, traits and a sample line. **Locked items can be tried on:** pick one and the preview wears it, but saving tells you what to do to unlock it. Your next story reward and your achievements are listed at the bottom. You can keep up to 50 buddies. Press **Esc** to close the studio.
 
 ## Personalities
 
@@ -253,29 +253,36 @@ Every buddy can live its own adventure. Run `/buddy story` and **choose one**. Y
 ![Captain Bolt](pixel-buddy-captain-bolt.svg)
 ```
 
-## Achievements
+## Unlocking the wardrobe
 
-You start with the 4 original types, 7 colours, classic eyes, a plain pattern and no accessory. Everything else is earned by using Claude Code with your buddy:
+You start with the 4 original types, 7 colours, classic eyes, a plain pattern and no accessory. The rest is earned in two ways.
+
+### Story rewards
+
+Most of the wardrobe comes from **playing stories**. Every chapter you finish counts, whichever story and whichever buddy it was:
+
+| Chapters finished | Unlocks | | Chapters finished | Unlocks |
+|---|---|---|---|---|
+| 1 | Spots pattern | | 12 | Dragon |
+| 2 | Big & shiny eyes | | 14 | Angry eyes |
+| 3 | Party hat | | 16 | Gradient pattern |
+| 4 | Cat | | 18 | Crown |
+| 6 | Stripes pattern | | 20 | Cactus, Flower |
+| 8 | Bow | | 24 | Headphones |
+| 10 | Love eyes | | 28 | Shades |
+
+A reward arrives in the same toast as the chapter that earned it ("Grass rebuilt! 🎁 Love eyes unlocked!"), so there's one moment, not three.
+
+### Achievements
+
+A short shelf of real milestones:
 
 | Achievement | Goal | Unlocks |
 |---|---|---|
 | 🏆 **Hello, friend** | Make your first buddy | Dots eyes, Belly pattern |
-| 🏆 **Chatterbox** | Send 25 prompts | Spots pattern |
-| 🏆 **Green light** | Pass tests or a build 3 times | Party hat |
-| 🏆 **Best friends** | Poke your buddy 10 times | Love eyes |
-| 🏆 **Collector** | Make 3 buddies | Bow |
-| 🏆 **Regular** | Use Claude Code on 3 different days | Cat |
-| 🏆 **Cosy** | Start 10 sessions | Scarf |
-| 🏆 **Bounce back** | Survive 10 errors | Angry eyes |
-| 🏆 **Deep thinker** | Hear 15 random thoughts | Big & shiny eyes |
-| 🏆 **Hard worker** | Watch Claude run 100 tools | Headphones |
-| 🏆 **Marathon** | Finish 5 long jobs (45 s or more) | Stripes pattern |
-| 🏆 **Artist** | Use Claude Code on 5 different days | Custom colour |
+| 🏆 **A week together** | Use Claude Code on 7 different days | Scarf |
+| 🏆 **A month together** | Use Claude Code on 30 different days | Custom colour |
 | 🏆 **Night owl** | Send 10 prompts between midnight and 5 am | Sleepy eyes, Beanie |
-| 🏆 **Green thumb** | Send 100 prompts | Cactus, Flower |
-| 🏆 **Devoted** | Use Claude Code on 7 different days | Dragon, Gradient pattern |
-| 🏆 **Champion** | Pass tests or a build 25 times | Crown |
-| 🏆 **Cool customer** | Watch Claude run 500 tools | Shades |
 | 🏆 **Spooky season** | Use Claude Code during Halloween (15 Oct to 2 Nov) | Witch hat |
 | 🏆 **Frosty** | Use Claude Code in winter (1 Dec to 6 Jan) | Santa hat |
 | 🏆 **Home again** | Finish *The Lost Pixels* | Pixel star |
@@ -284,9 +291,11 @@ You start with the 4 original types, 7 colours, classic eyes, a plain pattern an
 | 🏆 **Green fingers** | Finish *Code Garden* | Flower crown |
 | 🏆 **Treasure hunter** | Finish *The Sunken Repo* | Captain's hat |
 
-When you earn one, a toast says what you unlocked and your buddy celebrates. Run `/buddy achievements` or open the studio to see your progress.
+Run `/buddy achievements`, or open the studio, to see your progress and the next story reward.
 
-Only **counts** are kept (how many prompts, tool calls, wins and so on, plus the last day you were active), in the mod's own store on your machine. Nothing about what you typed or what Claude did is saved. Buddies made before 0.3 count toward *Hello, friend* and *Collector*.
+Only **counts** are kept (prompts, tool calls, wins, chapters and so on, plus the last day you were active), in the mod's own store on your machine. Nothing about what you typed or what Claude did is saved.
+
+> **Upgrading from 0.3 or 0.4?** Those versions had more, grindier achievements. They're no longer awarded, but **everything they unlocked stays unlocked**. Buddies made before 0.3 count toward *Hello, friend*.
 
 ## Settings
 
@@ -315,7 +324,7 @@ Pixel Buddies is a **mod**: a TypeScript hooks module that Claude Code loads in 
 | Desktop animation | an `Svg` element: each distinct picture of the buddy is drawn once in `<defs>` and shown in turn by `<use x=…>` with SMIL `<animate>`, so a walk across the stage is two pictures and no timers |
 | Saved buddies | `$.store`, checked on load by [`hooks/data.ts`](hooks/data.ts) |
 | Live state | `atom` / `read` / `update` over `$.state` (`mood`, `isAsleep`, `stats`, `earned`, …), so a change redraws whatever reads it |
-| Achievements | counts bumped from the same hooks, checked against [`hooks/achievements.ts`](hooks/achievements.ts), saved to `$.store` on the brain tick and at `session.end` |
+| Unlocks | counts bumped from the same hooks (including chapters finished), checked against the milestones and story rewards in [`hooks/achievements.ts`](hooks/achievements.ts), saved to `$.store` on the brain tick and at `session.end` |
 | Stories | each buddy's `journeys` (its current story and a run per story started) live in `$.store`. Each count checks the active buddy's quest in [`hooks/story.ts`](hooks/story.ts). A run banks its progress when it's paused (another buddy or story) and counts on when resumed. [`hooks/scenery.ts`](hooks/scenery.ts) draws the story's world so far behind the buddy (once in the SVG, under the moving frames) |
 | Seasons and birthdays | [`hooks/seasons.ts`](hooks/seasons.ts) gates seasonal acts and counts seasonal days; a birthday is checked once a day at session start |
 | Share card | [`hooks/card.ts`](hooks/card.ts) builds a self-contained SVG, written with `$.fs.write` |
@@ -341,7 +350,7 @@ claude plugin validate .
 claude plugin test .
 ```
 
-`validate` checks the manifest, the marketplace file and the hooks module the way the engine will load them. `test` runs 72 tests in ten suites:
+`validate` checks the manifest, the marketplace file and the hooks module the way the engine will load them. `test` runs 73 tests in ten suites:
 
 | Suite | Covers |
 |---|---|
@@ -394,7 +403,7 @@ hooks/
   animations.ts      the 9 animations as tick → pose
   sprites.ts         pixel data, effects, Raster and SVG encoders
   style.ts           eye styles, patterns, accessories, sprite anchors
-  achievements.ts    the 24 achievements, unlocks and stat counting
+  achievements.ts    milestones, story rewards, unlocks and stat counting
   acts.ts            the 53 acts, walking, and picking what to do next
   story.ts           the five stories: chapters, quests, runs and journeys
   scenery.ts         each story's world, piece by piece

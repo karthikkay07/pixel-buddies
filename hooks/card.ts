@@ -1,5 +1,5 @@
 import type { Buddy, Journey, Stats } from '../types'
-import { ACHIEVEMENTS } from './achievements'
+import { MILESTONES } from './achievements'
 import { clipOf } from './animations'
 import { personalityOf } from './personality'
 import { svgSource } from './sprites'
@@ -52,7 +52,7 @@ export function cardSvg(buddy: Buddy, stats: Stats, earned: readonly string[], j
     line(56, buddy.name, 26, buddy.color, 700) +
     line(82, `${p.label} ${buddy.kind}`, 15, '#c9ccd6') +
     line(116, `🗓 Day ${days} together`, 14, '#9a9aa6') +
-    line(140, `🏆 ${earned.length}/${ACHIEVEMENTS.length} achievements`, 14, '#9a9aa6') +
+    line(140, `🏆 ${MILESTONES.filter(a => earned.includes(a.id)).length}/${MILESTONES.length} achievements`, 14, '#9a9aa6') +
     line(164, `${def?.emoji ?? '📖'} ${storyLine}`, 13, '#9a9aa6') +
     line(188, `⚡ ${stats.prompts} prompts · ${stats.wins} wins`, 14, '#9a9aa6') +
     `<text x="24" y="222" ${mono} font-size="12" fill="#6e6e7a">Pixel Buddies for Claude Code · ${REPO}</text>` +

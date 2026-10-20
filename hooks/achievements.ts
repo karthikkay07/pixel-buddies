@@ -28,34 +28,87 @@ export type Achievement = {
   stat: keyof Omit<Stats, 'lastDay'>
   target: number
   rewards: readonly Item[]
+  /**
+   * A milestone is a trophy on the shelf; a chapter reward is a piece of the
+   * wardrobe that comes with finishing story chapters (any story, any buddy).
+   */
+  kind: 'milestone' | 'chapter'
 }
 
+const milestone = (id: string, title: string, goal: string, stat: Achievement['stat'], target: number, rewards: readonly Item[]): Achievement => ({
+  id,
+  title,
+  goal,
+  stat,
+  target,
+  rewards,
+  kind: 'milestone',
+})
+
+const chapters = (n: number, rewards: readonly Item[]): Achievement => ({
+  id: `chapters-${n}`,
+  title: 'Story reward',
+  goal: `Finish ${n} story chapter${n === 1 ? '' : 's'}`,
+  stat: 'chaptersDone',
+  target: n,
+  rewards,
+  kind: 'chapter',
+})
+
 export const ACHIEVEMENTS: readonly Achievement[] = [
-  { id: 'first-buddy', title: 'Hello, friend', goal: 'Make your first buddy', stat: 'buddiesMade', target: 1, rewards: ['eyes:dots', 'pattern:belly'] },
-  { id: 'chatterbox', title: 'Chatterbox', goal: 'Send 25 prompts', stat: 'prompts', target: 25, rewards: ['pattern:spots'] },
-  { id: 'green-light', title: 'Green light', goal: 'Pass tests or a build 3 times', stat: 'wins', target: 3, rewards: ['accessory:party'] },
-  { id: 'best-friends', title: 'Best friends', goal: 'Poke your buddy 10 times', stat: 'pokes', target: 10, rewards: ['eyes:love'] },
-  { id: 'collector', title: 'Collector', goal: 'Make 3 buddies', stat: 'buddiesMade', target: 3, rewards: ['accessory:bow'] },
-  { id: 'regular', title: 'Regular', goal: 'Use Claude Code on 3 different days', stat: 'days', target: 3, rewards: ['kind:cat'] },
-  { id: 'cosy', title: 'Cosy', goal: 'Start 10 sessions', stat: 'sessions', target: 10, rewards: ['accessory:scarf'] },
-  { id: 'bounce-back', title: 'Bounce back', goal: 'Survive 10 errors', stat: 'errors', target: 10, rewards: ['eyes:angry'] },
-  { id: 'deep-thinker', title: 'Deep thinker', goal: 'Hear 15 random thoughts', stat: 'thoughts', target: 15, rewards: ['eyes:big'] },
-  { id: 'hard-worker', title: 'Hard worker', goal: 'Watch Claude run 100 tools', stat: 'toolCalls', target: 100, rewards: ['accessory:headphones'] },
-  { id: 'marathon', title: 'Marathon', goal: 'Finish 5 long jobs (45 s or more)', stat: 'longTurns', target: 5, rewards: ['pattern:stripes'] },
-  { id: 'artist', title: 'Artist', goal: 'Use Claude Code on 5 different days', stat: 'days', target: 5, rewards: ['color:custom'] },
-  { id: 'night-owl', title: 'Night owl', goal: 'Send 10 prompts between midnight and 5 am', stat: 'nightPrompts', target: 10, rewards: ['eyes:sleepy', 'accessory:beanie'] },
-  { id: 'green-thumb', title: 'Green thumb', goal: 'Send 100 prompts', stat: 'prompts', target: 100, rewards: ['kind:cactus', 'accessory:flower'] },
-  { id: 'devoted', title: 'Devoted', goal: 'Use Claude Code on 7 different days', stat: 'days', target: 7, rewards: ['kind:dragon', 'pattern:gradient'] },
-  { id: 'champion', title: 'Champion', goal: 'Pass tests or a build 25 times', stat: 'wins', target: 25, rewards: ['accessory:crown'] },
-  { id: 'cool-customer', title: 'Cool customer', goal: 'Watch Claude run 500 tools', stat: 'toolCalls', target: 500, rewards: ['accessory:shades'] },
-  { id: 'spooky', title: 'Spooky season', goal: 'Use Claude Code during Halloween (15 Oct to 2 Nov)', stat: 'halloweenDays', target: 1, rewards: ['accessory:witch'] },
-  { id: 'frosty', title: 'Frosty', goal: 'Use Claude Code in winter (1 Dec to 6 Jan)', stat: 'winterDays', target: 1, rewards: ['accessory:santa'] },
-  { id: 'story-pixels', title: 'Home again', goal: 'Finish The Lost Pixels', stat: 'storyPixels', target: 1, rewards: ['accessory:star'] },
-  { id: 'story-voyager', title: 'Liftoff!', goal: 'Finish Star Voyager', stat: 'storyVoyager', target: 1, rewards: ['accessory:astronaut'] },
-  { id: 'story-king', title: 'Hero of the Realm', goal: 'Finish The Bug King', stat: 'storyKing', target: 1, rewards: ['accessory:knight'] },
-  { id: 'story-garden', title: 'Green fingers', goal: 'Finish Code Garden', stat: 'storyGarden', target: 1, rewards: ['accessory:wreath'] },
-  { id: 'story-repo', title: 'Treasure hunter', goal: 'Finish The Sunken Repo', stat: 'storyRepo', target: 1, rewards: ['accessory:tricorn'] },
+  // The trophy shelf: real milestones.
+  milestone('first-buddy', 'Hello, friend', 'Make your first buddy', 'buddiesMade', 1, ['eyes:dots', 'pattern:belly']),
+  milestone('week', 'A week together', 'Use Claude Code on 7 different days', 'days', 7, ['accessory:scarf']),
+  milestone('month', 'A month together', 'Use Claude Code on 30 different days', 'days', 30, ['color:custom']),
+  milestone('night-owl', 'Night owl', 'Send 10 prompts between midnight and 5 am', 'nightPrompts', 10, ['eyes:sleepy', 'accessory:beanie']),
+  milestone('spooky', 'Spooky season', 'Use Claude Code during Halloween (15 Oct to 2 Nov)', 'halloweenDays', 1, ['accessory:witch']),
+  milestone('frosty', 'Frosty', 'Use Claude Code in winter (1 Dec to 6 Jan)', 'winterDays', 1, ['accessory:santa']),
+  milestone('story-pixels', 'Home again', 'Finish The Lost Pixels', 'storyPixels', 1, ['accessory:star']),
+  milestone('story-voyager', 'Liftoff!', 'Finish Star Voyager', 'storyVoyager', 1, ['accessory:astronaut']),
+  milestone('story-king', 'Hero of the Realm', 'Finish The Bug King', 'storyKing', 1, ['accessory:knight']),
+  milestone('story-garden', 'Green fingers', 'Finish Code Garden', 'storyGarden', 1, ['accessory:wreath']),
+  milestone('story-repo', 'Treasure hunter', 'Finish The Sunken Repo', 'storyRepo', 1, ['accessory:tricorn']),
+  // The wardrobe, a piece at a time as the stories go on.
+  chapters(1, ['pattern:spots']),
+  chapters(2, ['eyes:big']),
+  chapters(3, ['accessory:party']),
+  chapters(4, ['kind:cat']),
+  chapters(6, ['pattern:stripes']),
+  chapters(8, ['accessory:bow']),
+  chapters(10, ['eyes:love']),
+  chapters(12, ['kind:dragon']),
+  chapters(14, ['eyes:angry']),
+  chapters(16, ['pattern:gradient']),
+  chapters(18, ['accessory:crown']),
+  chapters(20, ['kind:cactus', 'accessory:flower']),
+  chapters(24, ['accessory:headphones']),
+  chapters(28, ['accessory:shades']),
 ]
+
+export const MILESTONES = ACHIEVEMENTS.filter(a => a.kind === 'milestone')
+export const CHAPTER_REWARDS = ACHIEVEMENTS.filter(a => a.kind === 'chapter')
+
+/**
+ * Achievements from before 0.5, no longer awarded: whoever earned one keeps
+ * what it unlocked.
+ */
+export const LEGACY_REWARDS: Readonly<Record<string, readonly Item[]>> = {
+  chatterbox: ['pattern:spots'],
+  'green-light': ['accessory:party'],
+  'best-friends': ['eyes:love'],
+  collector: ['accessory:bow'],
+  regular: ['kind:cat'],
+  cosy: ['accessory:scarf'],
+  'bounce-back': ['eyes:angry'],
+  'deep-thinker': ['eyes:big'],
+  'hard-worker': ['accessory:headphones'],
+  marathon: ['pattern:stripes'],
+  artist: ['color:custom'],
+  'green-thumb': ['kind:cactus', 'accessory:flower'],
+  devoted: ['kind:dragon', 'pattern:gradient'],
+  champion: ['accessory:crown'],
+  'cool-customer': ['accessory:shades'],
+}
 
 export const EMPTY_STATS: Stats = {
   prompts: 0,
@@ -76,6 +129,7 @@ export const EMPTY_STATS: Stats = {
   storyKing: 0,
   storyGarden: 0,
   storyRepo: 0,
+  chaptersDone: 0,
   lastDay: '',
 }
 
@@ -92,6 +146,7 @@ export function newlyEarned(stats: Stats, earned: readonly string[]): Achievemen
 export function unlockedItems(earned: readonly string[]): Set<Item> {
   const items = new Set<Item>(FREE)
   for (const a of ACHIEVEMENTS) if (earned.includes(a.id)) for (const r of a.rewards) items.add(r)
+  for (const id of earned) for (const r of LEGACY_REWARDS[id] ?? []) items.add(r)
   return items
 }
 

@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { ACTS, pickNext } from '../hooks/acts'
-import { ACHIEVEMENTS, EMPTY_STATS } from '../hooks/achievements'
+import { ACHIEVEMENTS, EMPTY_STATS, MILESTONES } from '../hooks/achievements'
 import { cardFileName, cardSvg, daysTogether } from '../hooks/card'
 import { cleanJourneys } from '../hooks/data'
 import { ARCHETYPE_NAMES } from '../hooks/personality'
@@ -188,7 +188,7 @@ test('a card is a self-contained SVG, safe whatever the name', async () => {
   expect(svg.includes('<&>')).toBe(false)
   expect(svg.includes('Day 20 together')).toBe(true)
   expect(svg.includes('The Sunken Repo, ch. 3: Rough seas')).toBe(true)
-  expect(svg.includes(`1/${ACHIEVEMENTS.length} achievements`)).toBe(true)
+  expect(svg.includes(`1/${MILESTONES.length} achievements`)).toBe(true)
   expect(cardSvg(buddy, EMPTY_STATS, [], undefined, '2026-10-20').includes('Choosing an adventure')).toBe(true)
   expect(cardFileName('Captain Bolt!')).toBe('pixel-buddy-captain-bolt.svg')
   expect(cardFileName('🦀')).toBe('pixel-buddy-buddy.svg')

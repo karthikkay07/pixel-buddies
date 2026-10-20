@@ -3,7 +3,8 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { ActState, Anim, Archetype, Buddy, Draft, Journey, Mood, Run, Stats, StoryId, Style } from '../types'
 import {
-  ACHIEVEMENTS,
+  CHAPTER_REWARDS,
+  MILESTONES,
   EMPTY_STATS,
   bump,
   isNight,
@@ -259,14 +260,24 @@ async function expire($: EngineInterface) {
   }))
 }
 
-/** Counts one of something toward the achievements, and awards any it completes. */
-async function count($: EngineInterface, stat: keyof Omit<Stats, 'lastDay'> | null) {
+/**
+ * Counts one of something, awards whatever it completes, and moves the story
+ * on. `quiet` records the awards without a toast of their own, for the story
+ * to announce with its own.
+ */
+async function count($: EngineInterface, stat: keyof Omit<Stats, 'lastDay'> | null, quiet = false): Promise<Achievement[]> {
   const now = await $.clock.now()
   const next = await update($, stats, s => bump(s, stat, now))
   isStatsDirty = true
   const fresh = newlyEarned(next, await read($, earned))
-  if (fresh.length > 0) await award($, fresh)
+  if (fresh.length > 0) await award($, fresh, quiet)
   await advanceStory($)
+  return fresh
+}
+
+/** What some awards unlocked, in words: "Spots pattern", "Space helmet". */
+function rewardsOf(list: readonly Achievement[]): string {
+  return list.flatMap(a => a.rewards.map(r => itemLabel(r, KINDS))).join(', ')
 }
 
 /** The scene behind a buddy: its current story's, as far as it has been rebuilt. */
@@ -332,17 +343,23 @@ async function advanceStory($: EngineInterface) {
   const next = nextChapter(a.run, st)
   await setRun($, a.buddy.id, a.id, next)
   await saveJourneys($)
-  $.ui.toast(
-    `${def.emoji} ${def.title}, chapter ${a.run.chapter + 1} complete: ${chapter.title}.${chapter.piece ? ` ${chapter.piece} rebuilt!` : ''} /buddy story`,
-    { timeoutMs: 9000 },
-  )
+  const unlocked = await count($, 'chaptersDone', true)
   if (!(await read($, isHidden))) {
     await show($, 'celebrate', 4500, level === 'silent' ? null : fillStory(chapter.ending, a.buddy.name), false)
   }
   if (isFinished(a.id, next)) {
-    $.ui.toast(`${def.emoji} You and ${a.buddy.name} finished ${def.title}! Pick your next adventure in /buddy story.`, { timeoutMs: 10_000 })
-    await count($, def.finishStat)
+    const trophy = await count($, def.finishStat, true)
+    const won = [...unlocked, ...trophy]
+    const shelf = trophy[0] ? ` 🏆 ${trophy[0].title}` : ''
+    $.ui.toast(
+      `${def.emoji} You and ${a.buddy.name} finished ${def.title}!${shelf}${won.length > 0 ? ` · unlocked: ${rewardsOf(won)}` : ''}. Pick your next adventure in /buddy story.`,
+      { timeoutMs: 12_000 },
+    )
   } else {
+    $.ui.toast(
+      `${def.emoji} ${def.title}, chapter ${a.run.chapter + 1} complete: ${chapter.title}.${chapter.piece ? ` ${chapter.piece} rebuilt!` : ''}${unlocked.length > 0 ? ` 🎁 ${rewardsOf(unlocked)} unlocked!` : ''} /buddy story`,
+      { timeoutMs: 9000 },
+    )
     $.clock.after(12_000, () => void tellChapter($))
   }
 }
@@ -381,16 +398,20 @@ async function celebrateBirthday($: EngineInterface) {
   await show($, 'happy', 3000, level === 'silent' ? null : `It's my birthday! I'm ${age} today!`, false)
 }
 
-async function award($: EngineInterface, list: readonly Achievement[]) {
+async function award($: EngineInterface, list: readonly Achievement[], quiet = false) {
   await update($, earned, e => [...e, ...list.map(a => a.id)])
   isStatsDirty = true
   await flushStats($)
+  if (quiet) return
   for (const a of list) {
     const rewards = a.rewards.map(r => itemLabel(r, KINDS)).join(' and ')
-    $.ui.toast(`🏆 ${a.title}: ${rewards} unlocked! Try it in /buddy`, { timeoutMs: 8000 })
+    $.ui.toast(
+      a.kind === 'milestone' ? `🏆 ${a.title}: ${rewards} unlocked! Try it in /buddy` : `🎁 Story reward: ${rewards} unlocked! Try it in /buddy`,
+      { timeoutMs: 8000 },
+    )
   }
   const last = list[list.length - 1]
-  if (last && (await activeBuddy($)) && !(await read($, isHidden))) {
+  if (last && last.kind === 'milestone' && (await activeBuddy($)) && !(await read($, isHidden))) {
     const rewards = last.rewards.map(r => itemLabel(r, KINDS)).join(' and ')
     // A silent buddy celebrates without a word; the toast says what was earned.
     await show($, 'celebrate', 4000, level === 'silent' ? null : `We earned “${last.title}”! ${rewards} unlocked!`, false)
@@ -647,12 +668,22 @@ async function setCustomColor($: EngineInterface, text: string) {
 async function achievementsText($: EngineInterface): Promise<string> {
   const s = await read($, stats)
   const e = await read($, earned)
-  const lines = ACHIEVEMENTS.map(a => {
+  const shelf = MILESTONES.map(a => {
     const p = progress(s, a)
     const rewards = a.rewards.map(r => itemLabel(r, KINDS)).join(', ')
     return e.includes(a.id) ? `🏆 ${a.title}: ${rewards}` : `🔒 ${a.title} (${p.value}/${a.target}): ${a.goal}, unlocks ${rewards}`
   })
-  return [`Achievements: ${e.length}/${ACHIEVEMENTS.length}`, ...lines].join('\n')
+  const story = CHAPTER_REWARDS.map(a => {
+    const rewards = a.rewards.map(r => itemLabel(r, KINDS)).join(', ')
+    return `${e.includes(a.id) ? '🎁' : '🔒'} ${a.target} chapter${a.target === 1 ? '' : 's'}: ${rewards}`
+  })
+  return [
+    `Achievements: ${MILESTONES.filter(a => e.includes(a.id)).length}/${MILESTONES.length}`,
+    ...shelf,
+    '',
+    `Story rewards (${s.chaptersDone} chapter${s.chaptersDone === 1 ? '' : 's'} finished):`,
+    ...story,
+  ].join('\n')
 }
 
 export const register: Register = (on, options) => {
@@ -1135,9 +1166,29 @@ export const register: Register = (on, options) => {
 
         <Box flexDirection="column">
           <Text bold>
-            Achievements <Text dimColor>{got.length}/{ACHIEVEMENTS.length}</Text>
+            Story rewards{' '}
+            <Text dimColor>
+              {CHAPTER_REWARDS.filter(a => got.includes(a.id)).length}/{CHAPTER_REWARDS.length} · {s.chaptersDone} chapter
+              {s.chaptersDone === 1 ? '' : 's'} finished
+            </Text>
           </Text>
-          {ACHIEVEMENTS.map(a => {
+          {(() => {
+            const nextReward = CHAPTER_REWARDS.find(a => !got.includes(a.id))
+            return nextReward ? (
+              <Text dimColor>
+                Next: {nextReward.rewards.map(r => itemLabel(r, KINDS)).join(', ')} at {nextReward.target} chapters. Play a story: /buddy story
+              </Text>
+            ) : (
+              <Text dimColor>Every story reward unlocked!</Text>
+            )
+          })()}
+        </Box>
+
+        <Box flexDirection="column">
+          <Text bold>
+            Achievements <Text dimColor>{MILESTONES.filter(a => got.includes(a.id)).length}/{MILESTONES.length}</Text>
+          </Text>
+          {MILESTONES.map(a => {
             const p = progress(s, a)
             const rewards = a.rewards.map(r => itemLabel(r, KINDS)).join(', ')
             return got.includes(a.id) ? (

@@ -122,9 +122,10 @@ test('finishing a story earns its achievement and reward', { options: { sleepAft
   const { toasts } = world(on, SEPTEMBER, saved)
   await $.session.start({ cwd: '/work', surface: 'desktop', isInteractive: true })
   expect((saved.journeys as Journeys).b?.runs.voyager?.chapter).toBe(8)
-  expect(toasts).toContain('🚀 You and Bit finished Star Voyager! Pick your next adventure in /buddy story.')
   expect(saved.earned).toContain('story-voyager')
-  expect(toasts).toContain('🏆 Liftoff!: Space helmet unlocked! Try it in /buddy')
+  // One toast says it all: the story, the trophy, and what came with it.
+  expect(toasts).toContain('🚀 You and Bit finished Star Voyager! 🏆 Liftoff! · unlocked: Spots pattern, Space helmet. Pick your next adventure in /buddy story.')
+  expect(toasts.some(t => t.startsWith('🏆 Liftoff!:'))).toBe(false)
 })
 
 test('/buddy card saves an SVG to share', { options: { sleepAfterMinutes: 0 } }, async ($, on) => {

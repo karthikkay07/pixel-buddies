@@ -14,6 +14,9 @@ Stories to choose, seasons, and creatures that act like themselves.
   Each has 8 chapters with quests from your real work (prompts, passing tests, errors survived, long jobs, days, sessions, pokes, thoughts) and a world that builds **piece by piece on the buddy's stage**. `/buddy story` opens a "Choose your adventure" picker with a suggestion for your buddy's personality, then shows the chapter, its quest and the world so far. Chapters are announced in toasts, your buddy celebrates each ending, and its random thoughts hint at the quest.
 - **Each buddy plays its own story.** Progress is kept per buddy and per story, and only the active buddy's story counts what you do. Switching buddies or stories pauses one and resumes the other where it was left.
 - **Finishing a story** earns its 🏆 achievement and a hat to match: Pixel star, Space helmet, Knight helm, Flower crown and Captain's hat.
+- **Unlocks rethought around stories.** Most of the wardrobe now unlocks as you finish story chapters (any story, any buddy): spots after 1, the cat after 4, love eyes after 10, the crown after 18, and so on.
+- **Achievements trimmed to 11 milestones:** first buddy, a week together, a month together, night owl, the two seasonal ones, and one per story finished. The grindy counters (500 tool calls, 10 pokes, 25 prompts…) are gone. **Everything they unlocked stays unlocked.**
+- **One toast per moment:** a chapter ending and the reward it earned arrive together, and finishing a story names its trophy and everything it unlocked in one toast.
 - **Type quirks:** 14 new acts, two per type:
   - cat: grooming, chasing its tail
   - dragon: smoke, a tiny flame
@@ -28,7 +31,7 @@ Stories to choose, seasons, and creatures that act like themselves.
 - **Birthdays:** each buddy remembers the day it was made. Every year there's a toast, a hop and birthday cake. Buddies from earlier versions count from the day they first run 0.5.
 - **Share card:** `/buddy card` saves an animated SVG card (buddy, its story's world, personality, days together, achievements, chapter) to share or embed in a README.
 - New pose: fading (see-through). Free-floating props stay on the stage, and props can use the buddy's own colours.
-- 24 achievements and 15 accessories. 72 tests across 10 suites (up from 54).
+- 15 accessories. 73 tests across 10 suites (up from 54).
 
 ## 0.4.0 — 2026-10-19
 

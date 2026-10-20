@@ -1,5 +1,5 @@
 import type { Buddy, BuddyKind, Journey, Run, Stats, StoryId, Style } from '../types'
-import { ACHIEVEMENTS, EMPTY_STATS } from './achievements'
+import { ACHIEVEMENTS, EMPTY_STATS, LEGACY_REWARDS } from './achievements'
 import { isArchetype } from './personality'
 import { STORY_IDS, storyOf } from './story'
 import { KINDS } from './sprites'
@@ -99,7 +99,8 @@ export function cleanStats(value: unknown, roster: readonly Buddy[]): Stats {
 /** Earned achievement ids: known ones only, each once. */
 export function cleanEarned(value: unknown): string[] {
   if (!Array.isArray(value)) return []
-  const known = new Set(ACHIEVEMENTS.map(a => a.id))
+  // Ids from before 0.5 stay, so what they unlocked stays unlocked.
+  const known = new Set([...ACHIEVEMENTS.map(a => a.id), ...Object.keys(LEGACY_REWARDS)])
   return [...new Set(value.filter((id): id is string => typeof id === 'string' && known.has(id)))]
 }
 
