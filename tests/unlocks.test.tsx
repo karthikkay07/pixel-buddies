@@ -72,7 +72,7 @@ test('earning an achievement unlocks its reward', { options: { sleepAfterMinutes
   expect((saved.roster as Saved)[0]?.style.eyes).toBe('love')
 
   const text = (await $.command.run({ command: 'buddy', args: 'achievements', ...RUN })).text ?? ''
-  expect(text.startsWith('Achievements: 2/19')).toBe(true)
+  expect(text.startsWith('Achievements: 2/24')).toBe(true)
   expect(text).toContain('🏆 Best friends: Love eyes')
   expect(text).toContain('🔒 Champion (0/25)')
 })

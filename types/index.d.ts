@@ -2,7 +2,23 @@ export type BuddyKind = 'crab' | 'blob' | 'robot' | 'ghost' | 'cat' | 'dragon' |
 
 export type EyeStyle = 'classic' | 'dots' | 'big' | 'sleepy' | 'angry' | 'love'
 export type Pattern = 'plain' | 'spots' | 'stripes' | 'belly' | 'gradient'
-export type Accessory = 'none' | 'crown' | 'party' | 'beanie' | 'bow' | 'flower' | 'headphones' | 'shades' | 'scarf' | 'witch' | 'santa'
+export type Accessory =
+  | 'none'
+  | 'crown'
+  | 'party'
+  | 'beanie'
+  | 'bow'
+  | 'flower'
+  | 'headphones'
+  | 'shades'
+  | 'scarf'
+  | 'witch'
+  | 'santa'
+  | 'star'
+  | 'astronaut'
+  | 'knight'
+  | 'wreath'
+  | 'tricorn'
 
 /** How a buddy is dressed: absent on buddies saved before 0.3, which get the defaults. */
 export type Style = { eyes: EyeStyle; pattern: Pattern; accessory: Accessory }
@@ -90,16 +106,28 @@ export type Stats = {
   /** Days active during Halloween and during winter, for the seasonal achievements. */
   halloweenDays: number
   winterDays: number
+  /** Stories finished (by any buddy), one count each, for their achievements. */
+  storyPixels: number
+  storyVoyager: number
+  storyKing: number
+  storyGarden: number
+  storyRepo: number
   /** The last day counted in `days`, as YYYY-MM-DD in local time. */
   lastDay: string
 }
 
+export type StoryId = 'pixels' | 'voyager' | 'king' | 'garden' | 'repo'
+
 /**
- * Where the story stands: the chapter being played (0 is the prologue), the
- * stats when it began (its quest counts from there), and whether its opening
- * has been told.
+ * One buddy's way through one story: the chapter it is on, how much of that
+ * chapter's quest it has done while it was playing (`banked`), the stats
+ * when it last started playing (`from`, null while paused: another story or
+ * another buddy is being played), and whether the chapter's opening was told.
  */
-export type Story = { chapter: number; start: Stats; isTold: boolean }
+export type Run = { chapter: number; banked: number; from: Stats | null; isTold: boolean }
+
+/** A buddy's adventures: the story it is playing, and where it got to in each it has started. */
+export type Journey = { current: StoryId | null; runs: Partial<Record<StoryId, Run>> }
 
 declare module 'claude-code' {
   interface PluginState {
@@ -114,7 +142,10 @@ declare module 'claude-code' {
       stats: Stats
       /** Achievement ids earned, in the order they were earned. */
       earned: string[]
-      story: Story
+      /** Each buddy's adventures, by buddy id. */
+      journeys: Record<string, Journey>
+      /** What the story pane shows: the story being played, or the list to choose from. */
+      storyView: 'story' | 'picker'
     }
   }
 }

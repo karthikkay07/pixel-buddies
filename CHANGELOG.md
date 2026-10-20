@@ -2,9 +2,18 @@
 
 ## 0.5.0 — 2026-10-20
 
-A story, seasons, and creatures that act like themselves.
+Stories to choose, seasons, and creatures that act like themselves.
 
-- **The Lost Pixels:** an 8-chapter story. Your buddy fell out of Pixelia, a shattered game world, and every chapter's quest (prompts, passing tests, errors survived, long jobs, days together) brings a piece of its home back **on its stage**: grass, a tree, walls, a roof, a door and window, a lamp, a flag. `/buddy story` shows the chapter, the quest's progress and what's been rebuilt. Chapters are announced in toasts, your buddy celebrates each ending, and its random thoughts hint at the current quest. Chapter 8 ends on a cliffhanger.
+- **Stories, five to choose from:**
+  - 🏠 *The Lost Pixels*: rebuild a shattered home world
+  - 🚀 *Star Voyager*: build a rocket and fly home
+  - ⚔️ *The Bug King*: brave a dungeon and defeat the king of bugs
+  - 🌱 *Code Garden*: grow a garden from a seed
+  - 🏴‍☠️ *The Sunken Repo*: hunt treasure lost at sea
+
+  Each has 8 chapters with quests from your real work (prompts, passing tests, errors survived, long jobs, days, sessions, pokes, thoughts) and a world that builds **piece by piece on the buddy's stage**. `/buddy story` opens a "Choose your adventure" picker with a suggestion for your buddy's personality, then shows the chapter, its quest and the world so far. Chapters are announced in toasts, your buddy celebrates each ending, and its random thoughts hint at the quest.
+- **Each buddy plays its own story.** Progress is kept per buddy and per story, and only the active buddy's story counts what you do. Switching buddies or stories pauses one and resumes the other where it was left.
+- **Finishing a story** earns its 🏆 achievement and a hat to match: Pixel star, Space helmet, Knight helm, Flower crown and Captain's hat.
 - **Type quirks:** 14 new acts, two per type:
   - cat: grooming, chasing its tail
   - dragon: smoke, a tiny flame
@@ -17,9 +26,9 @@ A story, seasons, and creatures that act like themselves.
   - Halloween (15 Oct to 2 Nov): pumpkin carving, bats and *boo*, plus the 🏆 *Spooky season* achievement and its 🧙 witch hat
   - winter (1 Dec to 6 Jan): snowflakes, plus 🏆 *Frosty* and its 🎅 Santa hat
 - **Birthdays:** each buddy remembers the day it was made. Every year there's a toast, a hop and birthday cake. Buddies from earlier versions count from the day they first run 0.5.
-- **Share card:** `/buddy card` saves an animated SVG card (buddy, home, personality, days together, achievements, chapter) to share or embed in a README.
+- **Share card:** `/buddy card` saves an animated SVG card (buddy, its story's world, personality, days together, achievements, chapter) to share or embed in a README.
 - New pose: fading (see-through). Free-floating props stay on the stage, and props can use the buddy's own colours.
-- 19 achievements and 10 accessories. 68 tests across 10 suites (up from 54).
+- 24 achievements and 15 accessories. 72 tests across 10 suites (up from 54).
 
 ## 0.4.0 — 2026-10-19
 

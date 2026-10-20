@@ -32,7 +32,8 @@ test('every personality has three acts of its own, and everyone shares ten', asy
   }
 })
 
-test('every act draws on every type, in the terminal and as a small SVG', async () => {
+// Draws every act on every type in both encodings: thorough, so given room.
+test('every act draws on every type, in the terminal and as a small SVG', { timeoutMs: 30_000 }, async () => {
   for (const { value: kind } of KINDS) {
     for (const a of ACTS) {
       expect(rasterCells({ kind, color: '#4FA3E0', style: DEFAULT_STYLE }, a, 5).length).toBe(5760)

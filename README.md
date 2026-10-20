@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/hero.svg" alt="Four pixel buddies at home in Pixelia: Captain Bolt the pirate crab in shades with a telescope, Sunny the spotted cheerleader cat in a witch hat chasing its tail, Sleepy Mochi the crowned dragon puffing smoke, and Sprocket the nerd robot in headphones recharging, each in front of their rebuilt home" width="710">
+  <img src="assets/hero.svg" alt="Four pixel buddies, each in its own story: Captain Bolt the pirate crab in a captain's hat on the beach of The Sunken Repo, Sprocket the robot in a space helmet beside its rocket in Star Voyager, Sunny the cat in a flower crown in Code Garden, and Ember the dragon in a knight helm in the dungeon of The Bug King" width="710">
 </p>
 
 <h1 align="center">Pixel Buddies</h1>
@@ -8,7 +8,7 @@
   A tiny animated pixel-art companion with its own personality, living above your prompt in Claude Code.<br>
   Pick a type, a colour and a name. It reacts to your work, cheers your wins, sulks at errors, and thinks out loud.<br>
   It has a life of its own: it wanders, stretches, chases flies and does whatever its personality loves to do.<br>
-  And it has a story: help it find the lost pixels of its shattered home world, and watch home rebuild on its stage.<br>
+  And it has stories: pick an adventure (rebuild a lost world, fly a rocket home, beat the Bug King, grow a garden, find sunken treasure) and watch its world build up on its stage as you work.<br>
   Use it, earn achievements, and unlock new types, eyes, patterns and accessories.
 </p>
 
@@ -41,8 +41,8 @@
   - celebrates passing tests and successful builds
   - wobbles sadly at errors
   - stretches after a long job
-- **A story to play: *The Lost Pixels*.** Your buddy fell out of Pixelia, a little world inside an old game that shattered. Over 8 chapters, quests tied to your real work (passing tests, surviving errors, coming back tomorrow) rebuild its home **piece by piece, right on its stage**: grass, a tree, walls, a roof, a door, a lamp, a flag.
-- **A wardrobe to earn:** 7 types, 6 eye styles, 5 patterns, 10 accessories (2 of them seasonal) and any colour you like. **19 achievements** from real use unlock them, and you can try on anything locked to see what you're working toward.
+- **Five stories to choose from:** 🏠 *The Lost Pixels*, 🚀 *Star Voyager*, ⚔️ *The Bug King*, 🌱 *Code Garden* and 🏴‍☠️ *The Sunken Repo*. Each buddy plays **its own** adventure: 8 chapters of quests tied to your real work (passing tests, surviving errors, coming back tomorrow) that build its world **piece by piece, right on its stage**. Finish one for a trophy and a hat to match.
+- **A wardrobe to earn:** 7 types, 6 eye styles, 5 patterns, 15 accessories (2 seasonal, 5 from stories) and any colour you like. **24 achievements** from real use unlock them, and you can try on anything locked to see what you're working toward.
 - **Random thoughts:** between tasks it thinks out loud ("💭 If a function is never called, does it truly exist?"), paced by its personality and your chattiness setting.
 - **A life of its own:** between moments your buddy wanders around, looks about, stretches, yawns, sits, lies down and chases flies. It also has habits of its own: the pirate looks through a telescope, the grump sips coffee, the nerd types on a tiny laptop, the poet writes poems. That's **34 acts** and walking, picked by personality, energy and time of day.
 - **Behaves like the creature it is:** cats groom and chase their tails, dragons puff smoke, crabs scuttle sideways, blobs split in two, robots glitch and recharge, ghosts fade away, cacti bloom.
@@ -105,7 +105,7 @@ claude plugin uninstall pixel-buddies
 | Command | What it does |
 |---|---|
 | `/buddy` | Opens the **Buddy studio** panel |
-| `/buddy story` | Opens *The Lost Pixels*: the chapter you're on, its quest, and home so far |
+| `/buddy story` | Opens your buddy's story: the chapter, its quest and its world so far. With no story yet, opens the picker. |
 | `/buddy card` | Saves an animated SVG card of your buddy to your working folder, ready to share |
 | `/buddy poke` | Pokes your buddy. It always reacts. |
 | `/buddy achievements` | Lists every achievement with your progress and what it unlocks |
@@ -194,11 +194,33 @@ Your buddy doesn't just bob in place. Every so often it does something of its ow
 
 **The moment matters:** mornings bring stretches and coffee, late nights bring yawns, naps and moon-gazing, and a grump that just saw an error is much likelier to sulk under its cloud. Reactions (wins, errors, prompts) always cut in, and while Claude works your buddy works too, holding its personality's prop.
 
-## The Lost Pixels
+## Stories
 
-*Your buddy tumbles out of a crack in the screen and dusts itself off. "I'm from Pixelia," it says, "a little world inside an old game. It shattered, and its pixels scattered into the code all around us. Will you help me find them?"*
+Every buddy can live its own adventure. Run `/buddy story` and **choose one**. Your buddy's personality suggests the one that suits it (✨), but it's your call.
 
-The story is told in 8 short chapters. Each opens with a beat of story (shown as a toast and in `/buddy story`) and a **quest from your real work**. Finish the quest and the chapter ends: your buddy celebrates, and **a piece of its home comes back on its stage**.
+<p align="center"><img src="assets/stories.png" alt="All five story worlds finished, each with a buddy: Pixelia's house and garden, a rocket on its launch pad under the stars, a torch-lit dungeon with a treasure chest and a sword in the stone, a blossoming garden with a fence, pond and beehive, and a beach with a palm tree, a rowboat and treasure" width="640"></p>
+
+| Story | The premise | Its world | Suits | Finish reward |
+|---|---|---|---|---|
+| 🏠 **The Lost Pixels** | Your buddy fell out of Pixelia, a shattered game world. Find its lost pixels and rebuild its home. | grass, tree, walls, roof, door, lamp, flag | everyone | 🏆 *Home again* · Pixel star |
+| 🚀 **Star Voyager** | Crash-landed in your terminal, your buddy builds a rocket to fly back to the stars. | launch pad and stars, scaffold, hull, nose cone, fins, porthole, engine flame | nerd, philosopher | 🏆 *Liftoff!* · Space helmet |
+| ⚔️ **The Bug King** | Deep beneath your code, the Bug King sends bugs into the world. Brave his dungeon. | stone floor, torches, door, treasure chest, sword in the stone, the King's crown | grump, gremlin, cheerleader | 🏆 *Hero of the Realm* · Knight helm |
+| 🌱 **Code Garden** | A cosy one: grow a garden from a single seed, a little every day. | soil, sprout, flowers, fence, blossom tree, pond, beehive | sleepy, poet | 🏆 *Green fingers* · Flower crown |
+| 🏴‍☠️ **The Sunken Repo** | Washed ashore with a soggy map, your buddy hunts treasure lost at sea. | beach, palm tree, waves, rowboat, a bottle, X and shovel, treasure chest | pirate, gremlin | 🏆 *Treasure hunter* · Captain's hat |
+
+**How a story plays:**
+- Every story has **8 chapters**. Each opens with a short beat of story (a toast, and in full in `/buddy story`) and a **quest from your real work**: send prompts, pass tests, survive errors, finish long jobs, come back on another day.
+- Finish the quest and the chapter ends: your buddy celebrates, and **a piece of its world appears on its stage**, behind it everywhere it shows up (above the prompt, in the studio, on your card).
+- Your buddy sometimes thinks about the current quest ("💭 2 more green test runs and the pixels will light up…").
+- The last chapter is the finale: finish it for the story's 🏆 achievement and its hat. A finished world stays on your buddy's stage until you start another story.
+
+**Each buddy's own journey:**
+- Each buddy has its own story and its own progress, so your pirate crab can sail *The Sunken Repo* while your robot builds a rocket.
+- **Only the active buddy's story counts what you do.** Switch buddies and its story picks up where it left off, while the other one waits.
+- Start another story from **Choose another adventure** (`c`) in `/buddy story`. Every story you've started keeps its place, so you can come back to it any time.
+
+<details>
+<summary>The Lost Pixels, chapter by chapter</summary>
 
 <p align="center"><img src="assets/pixelia.png" alt="Pixelia rebuilding over seven chapters: grass, then a tree, walls, a roof, a door and window, a lamp post, and finally a flag on the roof" width="560"></p>
 
@@ -211,9 +233,9 @@ The story is told in 8 short chapters. Each opens with a beat of story (shown as
 | 5. A friend's knock | Poke your buddy 5 times | A door and a lit window |
 | 6. The long night | Finish 3 long jobs | A lamp post |
 | 7. Raise the flag | Watch Claude run 60 tools | A flag on the roof |
-| 8. Who's out there? | Come back on 3 more days | *To be continued…* |
+| 8. Who's out there? | Come back on 3 more days | The finale |
 
-Quests count from the moment their chapter begins. Your buddy sometimes thinks about the current one ("💭 2 more green test runs and the pixels will light up…"). The home is drawn behind your buddy everywhere it appears: above the prompt, in the studio, and on your card. The story is shared by all your buddies; it's your journey together.
+</details>
 
 ## Seasons and birthdays
 
@@ -225,7 +247,7 @@ Quests count from the moment their chapter begins. Your buddy sometimes thinks a
 
 ## Share your buddy
 
-`/buddy card` saves `pixel-buddy-<name>.svg` in your working folder: an animated card with your buddy waving in front of its home, its name and personality, days together, achievements and story chapter. Drop it into a README:
+`/buddy card` saves `pixel-buddy-<name>.svg` in your working folder: an animated card with your buddy waving in front of its story's world, its name and personality, days together, achievements and where it is in its story. Drop it into a README:
 
 ```markdown
 ![Captain Bolt](pixel-buddy-captain-bolt.svg)
@@ -256,6 +278,11 @@ You start with the 4 original types, 7 colours, classic eyes, a plain pattern an
 | 🏆 **Cool customer** | Watch Claude run 500 tools | Shades |
 | 🏆 **Spooky season** | Use Claude Code during Halloween (15 Oct to 2 Nov) | Witch hat |
 | 🏆 **Frosty** | Use Claude Code in winter (1 Dec to 6 Jan) | Santa hat |
+| 🏆 **Home again** | Finish *The Lost Pixels* | Pixel star |
+| 🏆 **Liftoff!** | Finish *Star Voyager* | Space helmet |
+| 🏆 **Hero of the Realm** | Finish *The Bug King* | Knight helm |
+| 🏆 **Green fingers** | Finish *Code Garden* | Flower crown |
+| 🏆 **Treasure hunter** | Finish *The Sunken Repo* | Captain's hat |
 
 When you earn one, a toast says what you unlocked and your buddy celebrates. Run `/buddy achievements` or open the studio to see your progress.
 
@@ -289,7 +316,7 @@ Pixel Buddies is a **mod**: a TypeScript hooks module that Claude Code loads in 
 | Saved buddies | `$.store`, checked on load by [`hooks/data.ts`](hooks/data.ts) |
 | Live state | `atom` / `read` / `update` over `$.state` (`mood`, `isAsleep`, `stats`, `earned`, …), so a change redraws whatever reads it |
 | Achievements | counts bumped from the same hooks, checked against [`hooks/achievements.ts`](hooks/achievements.ts), saved to `$.store` on the brain tick and at `session.end` |
-| The story | each count also checks the open chapter's quest in [`hooks/story.ts`](hooks/story.ts); finishing one advances `story` in `$.store`, and [`hooks/scenery.ts`](hooks/scenery.ts) draws the home built so far behind the buddy (once in the SVG, under the moving frames) |
+| Stories | each buddy's `journeys` (its current story and a run per story started) live in `$.store`. Each count checks the active buddy's quest in [`hooks/story.ts`](hooks/story.ts). A run banks its progress when it's paused (another buddy or story) and counts on when resumed. [`hooks/scenery.ts`](hooks/scenery.ts) draws the story's world so far behind the buddy (once in the SVG, under the moving frames) |
 | Seasons and birthdays | [`hooks/seasons.ts`](hooks/seasons.ts) gates seasonal acts and counts seasonal days; a birthday is checked once a day at session start |
 | Share card | [`hooks/card.ts`](hooks/card.ts) builds a self-contained SVG, written with `$.fs.write` |
 | Settings | `userConfig` in `plugin.json`, read from `register(on, options)` |
@@ -314,7 +341,7 @@ claude plugin validate .
 claude plugin test .
 ```
 
-`validate` checks the manifest, the marketplace file and the hooks module the way the engine will load them. `test` runs 68 tests in ten suites:
+`validate` checks the manifest, the marketplace file and the hooks module the way the engine will load them. `test` runs 72 tests in ten suites:
 
 | Suite | Covers |
 |---|---|
@@ -325,8 +352,8 @@ claude plugin test .
 | [`tests/lifecycle.test.tsx`](tests/lifecycle.test.tsx) | Restoring from a partly broken store, `/buddy hide` and `show`, switching, Save as new, Delete |
 | [`tests/achievements.test.ts`](tests/achievements.test.ts) | Every item free or earned by exactly one achievement, progress, unlocking, day counting, accessory anchors on every type |
 | [`tests/unlocks.test.tsx`](tests/unlocks.test.tsx) | Trying on locked items and being stopped at save, earning *Best friends* by poking and saving love eyes, custom colours after *Artist* |
-| [`tests/story.test.ts`](tests/story.test.ts) | Chapters and quests, home growing piece by piece, season dates, birthdays, quirks by type and seasonal acts by season, the card (escaping, file names, days together) |
-| [`tests/journey.test.tsx`](tests/journey.test.tsx) | The story told and its first quest finished by real prompts, the story pane, `/buddy card` writing its file, a birthday toast, Halloween's witch hat, birthdays for older buddies |
+| [`tests/story.test.ts`](tests/story.test.ts) | Five stories (chapters, scenes, finales, rewards), suggestions by personality, pausing and resuming runs, switching stories, every world growing piece by piece, stored journeys, seasons, birthdays, quirks and seasonal acts, the card |
+| [`tests/journey.test.tsx`](tests/journey.test.tsx) | Being asked to choose, the picker and its suggestion, a first chapter finished by real prompts, two buddies with their own stories (only the active one counts), finishing a story for its reward, `/buddy card`, birthdays, Halloween |
 | [`tests/data.test.ts`](tests/data.test.ts) | Store checks: buddies, styles, stats, earned achievements and the story, including upgrades from earlier versions |
 
 [CI](.github/workflows/ci.yml) runs both commands on Ubuntu and Windows for every push and pull request, pinned to a known Claude Code version.
@@ -367,10 +394,10 @@ hooks/
   animations.ts      the 9 animations as tick → pose
   sprites.ts         pixel data, effects, Raster and SVG encoders
   style.ts           eye styles, patterns, accessories, sprite anchors
-  achievements.ts    the 19 achievements, unlocks and stat counting
+  achievements.ts    the 24 achievements, unlocks and stat counting
   acts.ts            the 53 acts, walking, and picking what to do next
-  story.ts           The Lost Pixels: chapters, quests, progress
-  scenery.ts         Pixelia's home, piece by piece
+  story.ts           the five stories: chapters, quests, runs and journeys
+  scenery.ts         each story's world, piece by piece
   seasons.ts         seasons and birthdays
   card.ts            the shareable SVG card
   props.ts           the props buddies hold and play with
@@ -384,7 +411,7 @@ assets/              README images
 
 ## Roadmap
 
-- **v0.6:** the story continues: the light on the horizon is another lost buddy. Visits and friendship on the stage, growing up (baby, teen, adult forms), git-aware reactions.
+- **v0.6:** visits and friendship (a buddy from your roster drops by and plays), growing up (baby, teen, adult forms), git-aware reactions, more stories.
 - **v0.7 (opt-in AI):** a richer personality written by Claude when you create a buddy, `/buddy ask`, rate-limited live quips. Only the buddy's profile and an event label are ever sent.
 - **v1.0:** memory and stats ("Day 12 together!"), an optional "speak through Claude" mode, sounds
 

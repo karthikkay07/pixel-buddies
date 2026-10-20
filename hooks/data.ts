@@ -1,6 +1,7 @@
-import type { Buddy, BuddyKind, Stats, Story, Style } from '../types'
+import type { Buddy, BuddyKind, Journey, Run, Stats, StoryId, Style } from '../types'
 import { ACHIEVEMENTS, EMPTY_STATS } from './achievements'
 import { isArchetype } from './personality'
+import { STORY_IDS, storyOf } from './story'
 import { KINDS } from './sprites'
 import { DEFAULT_STYLE, isAccessory, isEyeStyle, isPattern } from './style'
 
@@ -102,14 +103,34 @@ export function cleanEarned(value: unknown): string[] {
   return [...new Set(value.filter((id): id is string => typeof id === 'string' && known.has(id)))]
 }
 
-/**
- * The story as stored: a chapter within the story (or just past its end), the
- * stats it began from, and whether it was told. With nothing stored, the story
- * begins at the prologue from `stats` as they are now.
- */
-export function cleanStory(value: unknown, stats: Stats, chapters: number): Story {
-  if (typeof value !== 'object' || value === null) return { chapter: 0, start: stats, isTold: false }
+function cleanRun(id: StoryId, value: unknown): Run | null {
+  if (typeof value !== 'object' || value === null) return null
   const v = value as Record<string, unknown>
+  const chapters = storyOf(id).chapters.length
   const chapter = typeof v.chapter === 'number' && Number.isInteger(v.chapter) && v.chapter >= 0 ? Math.min(v.chapter, chapters) : 0
-  return { chapter, start: cleanStats(v.start, []), isTold: v.isTold === true }
+  const banked = typeof v.banked === 'number' && Number.isInteger(v.banked) && v.banked >= 0 ? Math.min(v.banked, 1e6) : 0
+  const from = typeof v.from === 'object' && v.from !== null ? cleanStats(v.from, []) : null
+  return { chapter, banked, from, isTold: v.isTold === true }
+}
+
+/**
+ * Every buddy's adventures as stored, by buddy id, for the buddies still in
+ * the roster: known stories only, each run within its story. A story being
+ * played always has a run.
+ */
+export function cleanJourneys(value: unknown, roster: readonly Buddy[]): Record<string, Journey> {
+  const out: Record<string, Journey> = {}
+  const v = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
+  for (const buddy of roster) {
+    const j = typeof v[buddy.id] === 'object' && v[buddy.id] !== null ? (v[buddy.id] as Record<string, unknown>) : {}
+    const rawRuns = typeof j.runs === 'object' && j.runs !== null ? (j.runs as Record<string, unknown>) : {}
+    const runs: Partial<Record<StoryId, Run>> = {}
+    for (const id of STORY_IDS) {
+      const run = cleanRun(id, rawRuns[id])
+      if (run) runs[id] = run
+    }
+    const current = typeof j.current === 'string' && STORY_IDS.includes(j.current as StoryId) && runs[j.current as StoryId] ? (j.current as StoryId) : null
+    out[buddy.id] = { current, runs }
+  }
+  return out
 }

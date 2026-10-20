@@ -50,6 +50,11 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'cool-customer', title: 'Cool customer', goal: 'Watch Claude run 500 tools', stat: 'toolCalls', target: 500, rewards: ['accessory:shades'] },
   { id: 'spooky', title: 'Spooky season', goal: 'Use Claude Code during Halloween (15 Oct to 2 Nov)', stat: 'halloweenDays', target: 1, rewards: ['accessory:witch'] },
   { id: 'frosty', title: 'Frosty', goal: 'Use Claude Code in winter (1 Dec to 6 Jan)', stat: 'winterDays', target: 1, rewards: ['accessory:santa'] },
+  { id: 'story-pixels', title: 'Home again', goal: 'Finish The Lost Pixels', stat: 'storyPixels', target: 1, rewards: ['accessory:star'] },
+  { id: 'story-voyager', title: 'Liftoff!', goal: 'Finish Star Voyager', stat: 'storyVoyager', target: 1, rewards: ['accessory:astronaut'] },
+  { id: 'story-king', title: 'Hero of the Realm', goal: 'Finish The Bug King', stat: 'storyKing', target: 1, rewards: ['accessory:knight'] },
+  { id: 'story-garden', title: 'Green fingers', goal: 'Finish Code Garden', stat: 'storyGarden', target: 1, rewards: ['accessory:wreath'] },
+  { id: 'story-repo', title: 'Treasure hunter', goal: 'Finish The Sunken Repo', stat: 'storyRepo', target: 1, rewards: ['accessory:tricorn'] },
 ]
 
 export const EMPTY_STATS: Stats = {
@@ -66,6 +71,11 @@ export const EMPTY_STATS: Stats = {
   days: 0,
   halloweenDays: 0,
   winterDays: 0,
+  storyPixels: 0,
+  storyVoyager: 0,
+  storyKing: 0,
+  storyGarden: 0,
+  storyRepo: 0,
   lastDay: '',
 }
 

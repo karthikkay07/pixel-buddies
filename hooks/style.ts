@@ -32,6 +32,11 @@ export const ACCESSORIES: readonly { value: Accessory; label: string }[] = [
   { value: 'scarf', label: 'Scarf' },
   { value: 'witch', label: 'Witch hat' },
   { value: 'santa', label: 'Santa hat' },
+  { value: 'star', label: 'Pixel star' },
+  { value: 'astronaut', label: 'Space helmet' },
+  { value: 'knight', label: 'Knight helm' },
+  { value: 'wreath', label: 'Flower crown' },
+  { value: 'tricorn', label: "Captain's hat" },
 ]
 
 export function isEyeStyle(value: unknown): value is EyeStyle {
@@ -153,6 +158,12 @@ const RED = 0xe8455a
 const DARK_RED = 0xb8323f
 const WITCH = 0x3b2a5c
 const FUR = 0xfff6f0
+const GLASS = 0xbfe6ff
+const HELM = 0xc9ccd6
+const HELM_DARK = 0x8a93a6
+const LEAF = 0x3cc48c
+const BLOOM = 0xff8fc7
+const HAT_BLACK = 0x2b2b33
 
 /** The pixels an accessory adds to a sprite. */
 export function accessoryDabs(accessory: Accessory, a: Anchors): Dab[] {
@@ -206,6 +217,21 @@ export function accessoryDabs(accessory: Accessory, a: Anchors): Dab[] {
       return stamp(['...KK..', '..KKK..', '..KKK..', '.KGGGK.', 'KKKKKKK'], cx - 3, a.headTop - 5, { K: WITCH, G: GOLD })
     case 'santa':
       return stamp(['.....W', '...RRR', '..RRRR', '.RRRRR.', 'FFFFFFF'], cx - 3, a.headTop - 5, { R: RED, W: FUR, F: FUR })
+    case 'star':
+      return stamp(['.Y.', 'YYY', '.Y.'], a.eyeMaxX, a.headTop - 3, { Y: GOLD })
+    case 'astronaut':
+      return stamp(['...R...', '...W...', '.WWWWW.', 'WGGGGGW', 'W.....W'], cx - 3, a.headTop - 4, { R: RED, W: FUR, G: GLASS })
+    case 'knight':
+      return stamp(['..R..', '.SSS.', 'SSSSS', 'SdSdS'], cx - 2, a.headTop - 4, { R: RED, S: HELM, d: HELM_DARK })
+    case 'wreath': {
+      const dabs: Dab[] = []
+      for (let x = a.eyeMinX - 1; x <= a.eyeMaxX + 1; x++) {
+        dabs.push({ x, y: a.headTop - 1, color: x % 2 === 0 ? BLOOM : x % 3 === 0 ? SUN : LEAF })
+      }
+      return dabs
+    }
+    case 'tricorn':
+      return stamp(['..KKK..', 'KKKWKKK', '.KKKKK.'], cx - 3, a.headTop - 3, { K: HAT_BLACK, W: FUR })
     case 'scarf': {
       const dabs: Dab[] = []
       const y = a.mouthY + 1

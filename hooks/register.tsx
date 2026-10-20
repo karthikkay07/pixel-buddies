@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { ActState, Anim, Archetype, Buddy, Draft, Mood, Stats, Style } from '../types'
+import type { ActState, Anim, Archetype, Buddy, Draft, Journey, Mood, Run, Stats, StoryId, Style } from '../types'
 import {
   ACHIEVEMENTS,
   EMPTY_STATS,
@@ -18,7 +18,22 @@ import type { Achievement, Item } from './achievements'
 import { ACTS, DOING, WORK_PROP, actById, pickNext, restMs, walkClip, walkTarget } from './acts'
 import { cardFileName, cardSvg } from './card'
 import { birthdayAge, dayOf, seasonOf } from './seasons'
-import { CHAPTERS, bar, fillStory, isFinished, piecesBuilt, questProgress } from './story'
+import type { SceneRef } from './scenery'
+import {
+  STORIES,
+  bar,
+  currentRun,
+  fillStory,
+  isFinished,
+  nextChapter,
+  pauseJourney,
+  piecesBuilt,
+  resumeJourney,
+  runProgress,
+  storyOf,
+  suggestedStory,
+  switchStory,
+} from './story'
 import { ANIMS, ANIM_NAMES, TICK_MS, clipOf, isAnim } from './animations'
 import type { Clip } from './animations'
 import { propFrames } from './props'
@@ -30,7 +45,7 @@ import {
   cleanName,
   cleanRoster,
   cleanStats,
-  cleanStory,
+  cleanJourneys,
   isColor,
   isKind,
 } from './data'
@@ -80,7 +95,8 @@ const isAsleep = atom({ plugin: 'pixel-buddies', key: 'isAsleep' } as const, fal
 const act = atom({ plugin: 'pixel-buddies', key: 'act' } as const, null)
 const stats = atom({ plugin: 'pixel-buddies', key: 'stats' } as const, EMPTY_STATS)
 const earned = atom({ plugin: 'pixel-buddies', key: 'earned' } as const, [])
-const story = atom({ plugin: 'pixel-buddies', key: 'story' } as const, { chapter: 0, start: EMPTY_STATS, isTold: false })
+const journeys = atom({ plugin: 'pixel-buddies', key: 'journeys' } as const, {})
+const storyView = atom({ plugin: 'pixel-buddies', key: 'storyView' } as const, 'story')
 
 // Settings, from the plugin's options (/config).
 let level: Chattiness = 'normal'
@@ -220,10 +236,10 @@ async function trigger($: EngineInterface, event: BuddyEvent, tool?: string) {
   const r = react(event, personalityOf(buddy), level, { name: buddy.name, tool, time: clockTime(now) }, recentLines)
   // Now and then a thought is about the story's quest instead.
   if (event === 'thought' && r.line !== null && Math.random() < 0.3) {
-    const st = await read($, story)
-    const chapter = CHAPTERS[st.chapter]
-    if (chapter) {
-      const q = questProgress(st, await read($, stats))
+    const cur = currentRun((await read($, journeys))[buddy.id])
+    const chapter = cur ? storyOf(cur.id).chapters[cur.run.chapter] : undefined
+    if (cur && chapter) {
+      const q = runProgress(cur.id, cur.run, await read($, stats))
       r.line = fillStory(chapter.hint, buddy.name, q.need - q.value)
     }
   }
@@ -253,38 +269,102 @@ async function count($: EngineInterface, stat: keyof Omit<Stats, 'lastDay'> | nu
   await advanceStory($)
 }
 
-async function saveStory($: EngineInterface) {
-  await $.store.set('story', await read($, story))
+/** The scene behind a buddy: its current story's, as far as it has been rebuilt. */
+function sceneOf(journey: Journey | undefined): SceneRef | null {
+  const cur = currentRun(journey)
+  return cur ? { story: cur.id, pieces: piecesBuilt(cur.id, cur.run.chapter) } : null
 }
 
-/** Ends the chapter whose quest is done: home grows, the buddy celebrates, and the next chapter is told soon after. */
-async function advanceStory($: EngineInterface) {
-  const st = await read($, story)
-  const chapter = CHAPTERS[st.chapter]
-  if (!chapter || !questProgress(st, await read($, stats)).isDone) return
-  const now = await read($, stats)
-  await update($, story, () => ({ chapter: st.chapter + 1, start: now, isTold: false }))
-  await saveStory($)
+async function saveJourneys($: EngineInterface) {
+  await $.store.set('journeys', await read($, journeys))
+}
+
+/** The active buddy and the story it is playing, if any. */
+async function activeRun($: EngineInterface): Promise<{ buddy: Buddy; id: StoryId; run: Run } | null> {
   const buddy = await activeBuddy($)
-  const name = buddy?.name ?? 'Your buddy'
+  if (!buddy) return null
+  const cur = currentRun((await read($, journeys))[buddy.id])
+  return cur ? { buddy, ...cur } : null
+}
+
+async function setRun($: EngineInterface, buddyId: string, id: StoryId, run: Run) {
+  await update($, journeys, all => {
+    const j = all[buddyId] ?? { current: null, runs: {} }
+    return { ...all, [buddyId]: { ...j, runs: { ...j.runs, [id]: run } } }
+  })
+}
+
+/** Makes another buddy the active one: its story picks up, the old one's is set aside. */
+async function switchActive($: EngineInterface, id: string | null) {
+  const before = await read($, activeId)
+  const st = await read($, stats)
+  await update($, journeys, all => {
+    const next = { ...all }
+    const old = before ? next[before] : undefined
+    if (before && old) next[before] = pauseJourney(old, st)
+    const now = id ? next[id] : undefined
+    if (id && now) next[id] = resumeJourney(now, st)
+    return next
+  })
+  await update($, activeId, () => id)
+  await saveJourneys($)
+}
+
+/** Starts (or goes back to) a story for the active buddy. */
+async function pickStory($: EngineInterface, id: StoryId) {
+  const buddy = await activeBuddy($)
+  if (!buddy) return
+  const st = await read($, stats)
+  await update($, journeys, all => ({ ...all, [buddy.id]: switchStory(all[buddy.id] ?? { current: null, runs: {} }, id, st) }))
+  await saveJourneys($)
+  await update($, storyView, () => 'story')
+  await tellChapter($)
+}
+
+/** Ends the chapter whose quest is done: the scene grows, the buddy celebrates, and the next chapter is told soon after. */
+async function advanceStory($: EngineInterface) {
+  const a = await activeRun($)
+  if (!a) return
+  const def = storyOf(a.id)
+  const chapter = def.chapters[a.run.chapter]
+  const st = await read($, stats)
+  if (!chapter || !runProgress(a.id, a.run, st).isDone) return
+  const next = nextChapter(a.run, st)
+  await setRun($, a.buddy.id, a.id, next)
+  await saveJourneys($)
   $.ui.toast(
-    `📖 Chapter ${st.chapter + 1} complete: ${chapter.title}.${chapter.piece ? ` The ${chapter.piece.toLowerCase()} is back in Pixelia!` : ''} /buddy story`,
+    `${def.emoji} ${def.title}, chapter ${a.run.chapter + 1} complete: ${chapter.title}.${chapter.piece ? ` ${chapter.piece} rebuilt!` : ''} /buddy story`,
     { timeoutMs: 9000 },
   )
-  if (buddy && !(await read($, isHidden))) {
-    await show($, 'celebrate', 4500, level === 'silent' ? null : fillStory(chapter.ending, name), false)
+  if (!(await read($, isHidden))) {
+    await show($, 'celebrate', 4500, level === 'silent' ? null : fillStory(chapter.ending, a.buddy.name), false)
   }
-  $.clock.after(12_000, () => void tellChapter($))
+  if (isFinished(a.id, next)) {
+    $.ui.toast(`${def.emoji} You and ${a.buddy.name} finished ${def.title}! Pick your next adventure in /buddy story.`, { timeoutMs: 10_000 })
+    await count($, def.finishStat)
+  } else {
+    $.clock.after(12_000, () => void tellChapter($))
+  }
 }
 
-/** Announces the chapter that has begun, once. */
+/** Announces the active buddy's chapter once it has begun; or, with no story yet, suggests picking one (once a day). */
 async function tellChapter($: EngineInterface) {
-  const st = await read($, story)
-  const chapter = CHAPTERS[st.chapter]
-  if (!chapter || st.isTold) return
-  await update($, story, s => ({ ...s, isTold: true }))
-  await saveStory($)
-  $.ui.toast(`📖 Chapter ${st.chapter + 1}: ${chapter.title}. Quest: ${chapter.quest.goal}. /buddy story`, { timeoutMs: 9000 })
+  const buddy = await activeBuddy($)
+  if (!buddy) return
+  const a = await activeRun($)
+  if (!a) {
+    const today = dayOf(await $.clock.now())
+    if ((await $.store.get('pickNudge')) === `${buddy.id}:${today}`) return
+    await $.store.set('pickNudge', `${buddy.id}:${today}`)
+    $.ui.toast(`📖 Choose an adventure for ${buddy.name}: /buddy story`, { timeoutMs: 9000 })
+    return
+  }
+  const def = storyOf(a.id)
+  const chapter = def.chapters[a.run.chapter]
+  if (!chapter || a.run.isTold) return
+  await setRun($, a.buddy.id, a.id, { ...a.run, isTold: true })
+  await saveJourneys($)
+  $.ui.toast(`${def.emoji} ${def.title}, chapter ${a.run.chapter + 1}: ${chapter.title}. Quest: ${chapter.quest.goal}. /buddy story`, { timeoutMs: 9000 })
 }
 
 /** A birthday, once on the day: a toast, a happy hop, and cake next. */
@@ -409,7 +489,7 @@ async function paint($: EngineInterface) {
       const m = await read($, mood)
       const now = await $.clock.now()
       const now2 = showing(m, await read($, isAsleep), await read($, act), now, personalityOf(buddy).archetype)
-      const scene = piecesBuilt((await read($, story)).chapter)
+      const scene = sceneOf((await read($, journeys))[buddy.id])
       const shown = await $.ui.blit({ requestId: bandSite, key: 'band-sprite', cells: rasterCells(buddy, now2.clip, tick - now2.since, scene) })
       // Not mounted any more: stop painting until the band draws it again.
       if (shown.deny) bandSite = null
@@ -441,11 +521,16 @@ async function start($: EngineInterface) {
   await update($, isHidden, () => savedHidden)
   await update($, stats, () => savedStats)
   await update($, earned, () => savedEarned)
-  const savedStory = cleanStory(await $.store.get('story'), savedStats, CHAPTERS.length)
-  await update($, story, () => savedStory)
+  // Only the active buddy's story counts what happens; every other one waits.
+  const loaded = cleanJourneys(await $.store.get('journeys'), saved)
+  for (const b of saved) {
+    const j = loaded[b.id]
+    if (j) loaded[b.id] = b.id === savedActive ? resumeJourney(j, savedStats) : pauseJourney(j, savedStats)
+  }
+  await update($, journeys, () => loaded)
   // Buddies from before 0.5 now have a birthday; keep it.
   await persist($)
-  await saveStory($)
+  await saveJourneys($)
   lastActivity = await $.clock.now()
 
   await $.command.register({
@@ -456,7 +541,7 @@ async function start($: EngineInterface) {
   $.clock.every(TICK_MS, () => void paint($))
   $.clock.every(BRAIN_EVERY_MS, () => void brain($))
   await scheduleAct($, 4000)
-  if (!savedStory.isTold) $.clock.after(6000, () => void tellChapter($))
+  $.clock.after(6000, () => void tellChapter($))
 }
 
 async function openStudio($: EngineInterface) {
@@ -496,7 +581,7 @@ async function saveDraft($: EngineInterface, asNew: boolean) {
   await update($, roster, list =>
     list.some(b => b.id === id) ? list.map(b => (b.id === id ? buddy : b)) : [...list, buddy],
   )
-  await update($, activeId, () => id)
+  await switchActive($, id)
   await update($, isHidden, () => false)
   await update($, isAsleep, () => false)
   await persist($)
@@ -506,7 +591,7 @@ async function saveDraft($: EngineInterface, asNew: boolean) {
 }
 
 async function useBuddy($: EngineInterface, b: Buddy) {
-  await update($, activeId, () => b.id)
+  await switchActive($, b.id)
   await update($, draft, d => ({ ...d, name: b.name, kind: b.kind, color: b.color, archetype: b.archetype, seed: b.seed, style: b.style }))
   await update($, mood, () => REST)
   await persist($)
@@ -518,9 +603,16 @@ async function deleteBuddy($: EngineInterface, b: Buddy) {
   await update($, roster, all => all.filter(x => x.id !== b.id))
   if (b.id === current?.id) {
     const rest = await read($, roster)
-    await update($, activeId, () => rest[0]?.id ?? null)
+    await switchActive($, rest[0]?.id ?? null)
     await update($, mood, () => REST)
   }
+  // Its adventures go with it.
+  await update($, journeys, all => {
+    const next = { ...all }
+    delete next[b.id]
+    return next
+  })
+  await saveJourneys($)
   await persist($)
 }
 
@@ -603,16 +695,19 @@ export const register: Register = (on, options) => {
     if (arg === 'achievements' || arg === 'stats') {
       return { text: await achievementsText($) }
     }
-    if (arg === 'story') {
-      await $.ui.open({ id: STORY, title: 'The Lost Pixels', focus: true, closeOnEscape: true })
-      await tellChapter($)
-      return { text: 'Story opened.' }
+    if (arg === 'story' || arg === 'stories') {
+      const buddy = await activeBuddy($)
+      if (!buddy) return { text: 'No buddy yet. /buddy makes one.' }
+      const playing = await activeRun($)
+      await update($, storyView, () => (playing ? 'story' : 'picker'))
+      await $.ui.open({ id: STORY, title: 'Stories', focus: true, closeOnEscape: true })
+      return { text: playing ? `${storyOf(playing.id).title} opened.` : `Choose an adventure for ${buddy.name}.` }
     }
     if (arg === 'card') {
       const buddy = await activeBuddy($)
       if (!buddy) return { text: 'No buddy yet. /buddy makes one.' }
       const file = cardFileName(buddy.name)
-      const svg = cardSvg(buddy, await read($, stats), await read($, earned), await read($, story), dayOf(await $.clock.now()))
+      const svg = cardSvg(buddy, await read($, stats), await read($, earned), (await read($, journeys))[buddy.id], dayOf(await $.clock.now()))
       try {
         await $.fs.write(file, svg)
       } catch (err) {
@@ -715,7 +810,7 @@ export const register: Register = (on, options) => {
     const now = await $.clock.now()
     const personality = personalityOf(buddy)
     const show = showing(m, await read($, isAsleep), await read($, act), now, personality.archetype)
-    const scene = piecesBuilt((await read($, story)).chapter)
+    const scene = sceneOf((await read($, journeys))[buddy.id])
     const line = m.line !== null && now < m.lineUntil ? m.line : null
 
     let sprite
@@ -767,55 +862,96 @@ export const register: Register = (on, options) => {
   })
 
   on('ui.render', { component: 'Pane', requestId: STORY }, async ($, e) => {
-    const { Box, Text } = $.ui.resolve(e)
-    const st = await read($, story)
+    const { Box, Text, Button } = $.ui.resolve(e)
     const buddy = await activeBuddy($)
-    const name = buddy?.name ?? 'Your buddy'
-    const scene = piecesBuilt(st.chapter)
-    const chapter = CHAPTERS[st.chapter]
-    const q = questProgress(st, await read($, stats))
-    const built = CHAPTERS.slice(0, st.chapter).flatMap(c => (c.piece ? [c.piece] : []))
+    if (!buddy) return <Text dimColor>Make a buddy first: /buddy</Text>
+    const journey = (await read($, journeys))[buddy.id]
+    const cur = currentRun(journey)
+    const st = await read($, stats)
+    const archetype = personalityOf(buddy).archetype
+
+    if ((await read($, storyView)) === 'picker' || !cur) {
+      const suggested = suggestedStory(archetype)
+      return (
+        <Box flexDirection="column" gap={1}>
+          <Text bold>📖 Choose an adventure for {buddy.name}</Text>
+          <Text dimColor wrap="wrap">
+            Each story has 8 chapters with quests from your real work, and builds its own scene on {buddy.name}'s stage. Progress is kept for every story you start.
+          </Text>
+          {STORIES.map(def => {
+            const run = journey?.runs[def.id]
+            const state = !run ? 'Not started' : isFinished(def.id, run) ? '✓ Complete' : `Chapter ${run.chapter + 1} of ${def.chapters.length}`
+            const isPlaying = cur?.id === def.id
+            return (
+              <Box key={`story-${def.id}`} flexDirection="column">
+                <Text>
+                  <Text bold>
+                    {def.emoji} {def.title}
+                  </Text>
+                  <Text dimColor>
+                    {' '}
+                    · {state}
+                    {def.id === suggested ? ` · ✨ suits ${buddy.name}` : ''}
+                  </Text>
+                </Text>
+                <Text dimColor wrap="wrap">
+                  {def.teaser}
+                </Text>
+                <Button key={`pick-${def.id}`} label={isPlaying ? 'Playing' : run ? 'Continue' : 'Start'} onPress={() => pickStory($, def.id)} />
+              </Box>
+            )
+          })}
+          {cur && <Button key="back" label="Back to the story" onPress={() => update($, storyView, () => 'story')} />}
+        </Box>
+      )
+    }
+
+    const def = storyOf(cur.id)
+    const chapter = def.chapters[cur.run.chapter]
+    const q = runProgress(cur.id, cur.run, st)
+    const scene = sceneOf(journey)
+    const built = def.chapters.slice(0, cur.run.chapter).flatMap(c => (c.piece ? [c.piece] : []))
 
     let stage = null
-    if (buddy && e.surface === 'terminal') {
+    if (e.surface === 'terminal') {
       const { Raster } = $.ui.resolve(e)
       stage = <Raster key="story-stage" columns={CANVAS_W} rows={CANVAS_H / 2} cells={rasterCells(buddy, clipOf('idle'), 0, scene)} />
-    } else if (buddy && e.surface !== 'terminal') {
+    } else {
       const { Svg } = $.ui.resolve(e)
-      stage = <Svg source={svgSource(buddy, clipOf('idle'), 's', scene)} alt={`${name} at home in Pixelia`} width={320} height={144} isInteractive />
+      stage = <Svg source={svgSource(buddy, clipOf('idle'), 's', scene)} alt={`${buddy.name} in ${def.title}`} width={320} height={144} isInteractive />
     }
 
     return (
       <Box flexDirection="column" gap={1}>
         {stage}
-        <Text bold>📖 The Lost Pixels</Text>
+        <Text bold>
+          {def.emoji} {def.title}
+        </Text>
         {chapter ? (
           <Box flexDirection="column">
-            <Text bold color={buddy?.color}>
-              Chapter {st.chapter + 1} of {CHAPTERS.length}: {chapter.title}
+            <Text bold color={buddy.color}>
+              Chapter {cur.run.chapter + 1} of {def.chapters.length}: {chapter.title}
             </Text>
-            <Text wrap="wrap">{fillStory(chapter.opening, name)}</Text>
+            <Text wrap="wrap">{fillStory(chapter.opening, buddy.name)}</Text>
             <Text> </Text>
             <Text>Quest: {chapter.quest.goal}</Text>
             <Text color="success">{bar(q.value, q.need)}</Text>
           </Box>
         ) : (
-          <Text wrap="wrap">Pixelia is rebuilt, and {name} has gone looking for the light. To be continued…</Text>
+          <Text wrap="wrap">Story complete! {buddy.name} keeps this scene. Choose another adventure whenever you like.</Text>
         )}
-        <Text dimColor>
-          Home so far: {built.length > 0 ? built.join(', ') : 'nothing yet: finish the first quest'}
-        </Text>
-        {st.chapter > 0 && (
+        <Text dimColor>Rebuilt so far: {built.length > 0 ? built.join(', ') : 'nothing yet: finish the first quest'}</Text>
+        {cur.run.chapter > 0 && (
           <Box flexDirection="column">
             <Text bold>So far</Text>
-            {CHAPTERS.slice(0, st.chapter).map((c, i) => (
+            {def.chapters.slice(0, cur.run.chapter).map((c, i) => (
               <Text key={`ch-${i}`} dimColor wrap="wrap">
-                {i + 1}. {c.title}: {fillStory(c.ending, name)}
+                {i + 1}. {c.title}: {fillStory(c.ending, buddy.name)}
               </Text>
             ))}
           </Box>
         )}
-        {isFinished(st) && <Text dimColor>The story continues in the next update.</Text>}
+        <Button key="switch" label="Choose another adventure" hotkey="c" onPress={() => update($, storyView, () => 'picker')} />
       </Box>
     )
   })

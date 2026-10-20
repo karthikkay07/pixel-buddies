@@ -1,9 +1,9 @@
-import type { Buddy, Stats, Story } from '../types'
+import type { Buddy, Journey, Stats } from '../types'
 import { ACHIEVEMENTS } from './achievements'
 import { clipOf } from './animations'
 import { personalityOf } from './personality'
 import { svgSource } from './sprites'
-import { CHAPTERS, piecesBuilt } from './story'
+import { currentRun, piecesBuilt, storyOf } from './story'
 
 const REPO = 'github.com/karthikkay07/pixel-buddies'
 
@@ -29,13 +29,16 @@ export function cardFileName(name: string): string {
  * A shareable card: the buddy waving on its stage, its home as far as the
  * story has rebuilt it, and who it is. One self-contained animated SVG.
  */
-export function cardSvg(buddy: Buddy, stats: Stats, earned: readonly string[], story: Story, today: string): string {
+export function cardSvg(buddy: Buddy, stats: Stats, earned: readonly string[], journey: Journey | undefined, today: string): string {
   const p = personalityOf(buddy)
-  const stage = svgSource(buddy, clipOf('wave'), 'card', piecesBuilt(story.chapter))
+  const cur = currentRun(journey)
+  const scene = cur ? { story: cur.id, pieces: piecesBuilt(cur.id, cur.run.chapter) } : null
+  const stage = svgSource(buddy, clipOf('wave'), 'card', scene)
     .replace(/^<svg[^>]*>/, '')
     .replace(/<\/svg>$/, '')
-  const chapter = CHAPTERS[story.chapter]
-  const storyLine = chapter ? `Chapter ${story.chapter + 1}: ${chapter.title}` : 'Pixelia rebuilt!'
+  const def = cur ? storyOf(cur.id) : null
+  const chapter = cur && def ? def.chapters[cur.run.chapter] : undefined
+  const storyLine = !cur || !def ? 'Choosing an adventure' : chapter ? `${def.title}, ch. ${cur.run.chapter + 1}: ${chapter.title}` : `${def.title}: complete!`
   const days = daysTogether(buddy.born, today)
   const mono = 'font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"'
   const line = (y: number, text: string, size: number, fill: string, weight = 400) =>
@@ -50,7 +53,7 @@ export function cardSvg(buddy: Buddy, stats: Stats, earned: readonly string[], s
     line(82, `${p.label} ${buddy.kind}`, 15, '#c9ccd6') +
     line(116, `🗓 Day ${days} together`, 14, '#9a9aa6') +
     line(140, `🏆 ${earned.length}/${ACHIEVEMENTS.length} achievements`, 14, '#9a9aa6') +
-    line(164, `📖 ${storyLine}`, 14, '#9a9aa6') +
+    line(164, `${def?.emoji ?? '📖'} ${storyLine}`, 13, '#9a9aa6') +
     line(188, `⚡ ${stats.prompts} prompts · ${stats.wins} wins`, 14, '#9a9aa6') +
     `<text x="24" y="222" ${mono} font-size="12" fill="#6e6e7a">Pixel Buddies for Claude Code · ${REPO}</text>` +
     `</svg>`
